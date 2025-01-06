@@ -1,0 +1,54 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #333;
+    color: #fff;
+  }
+  
+  .navbar-link {
+    color: #fff;
+    text-decoration: none;
+    margin-right: 15px;
+    font-size: 1rem;
+  }
+  
+  .navbar-link:hover {
+    text-decoration: underline;
+  }
+  
+  .navbar-right {
+    display: flex;
+    align-items: center;
+  }
+  
+  .welcome-message {
+    margin-right: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .profile-avatar {
+    margin-right: 10px;
+  }
+  
+  .avatar-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .logout-button {
+    background-color: #ff4d4d;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  
+  .logout-button:hover {
+    background-color: #e60000;
+  }
+  

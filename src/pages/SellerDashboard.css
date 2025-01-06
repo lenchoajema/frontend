@@ -1,0 +1,36 @@
+.seller-dashboard {
+  padding: 20px;
+}
+
+.product-form {
+  margin-bottom: 20px;
+}
+
+.product-form input,
+.product-form textarea {
+  display: block;
+  margin-bottom: 10px;
+  padding: 10px;
+  width: 100%;
+}
+
+.product-form button {
+  margin-right: 10px;
+  padding: 10px 20px;
+}
+
+.product-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.product-list th,
+.product-list td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.product-list button {
+  margin-right: 5px;
+}
