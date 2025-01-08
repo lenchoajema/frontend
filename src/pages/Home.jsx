@@ -44,3 +44,42 @@ const Home = () => {
 };
 
 export default Home;
+
+/*
+// Home.js - Displays all products
+import React, { useEffect, useState } from "react";
+import api from "../utils/api";
+import ProductCard from "../components/ProductCard";
+
+const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get("/products");
+        setProducts(response.data);
+      } catch (err) {
+        setError("Failed to fetch products.");
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  return (
+    <div>
+      <h1>All Products</h1>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="product-grid">
+        {products.map((product) => (
+          <ProductCard key={product._id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Home;
+*/

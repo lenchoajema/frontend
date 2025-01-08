@@ -1,78 +1,95 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../services/api";
+
+// Fetch cart items
+export const fetchCart = createAsyncThunk("cart/fetchCart", async (_, thunkAPI) => {
+  try {
+    const response = await api.get("/cart");
+    return response.data;
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response.data);
+  }
+});
+
+// Add item to cart
+export const addToCart = createAsyncThunk("cart/addToCart", async ({ productId, quantity }, thunkAPI) => {
+  try {
+    console.log("before add to cart", productId, quantity);
+    const response = await api.post('/cart', { productId, quantity });
+    console.log("after add to cart", response);
+    //const response = await api.post("/cart", { productId, quantity });
+    return response.data;  // Ensure the response includes `items` and `totalPrice`
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response.data);
+  }
+});
+
+// Remove item from cart
+export const removeFromCart = createAsyncThunk("cart/removeFromCart", async (id, thunkAPI) => {
+  try {
+    await api.delete(`/cart/${id}`);
+    return id;  // Return the ID of the removed item
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response.data);
+  }
+});
 
 const cartSlice = createSlice({
   name: "cart",
-  initialState: { items: [], total: 0 },
-  reducers: {
-    setCart(state, action) {
-      state.items = action.payload.items;
-      state.total = action.payload.total;
-    },
-    addItem(state, action) {
-      state.items.push(action.payload);
-      state.total += action.payload.price * action.payload.quantity;
-    },
-    updateItem(state, action) {
-      const index = state.items.findIndex(
-        (item) => item._id === action.payload._id
-      );
-      if (index >= 0) {
-        const oldQuantity = state.items[index].quantity;
-        state.items[index] = action.payload;
-        state.total +=
-          action.payload.quantity * action.payload.price -
-          oldQuantity * action.payload.price;
-      }
-    },
-    removeItem(state, action) {
-      const index = state.items.findIndex(
-        (item) => item._id === action.payload._id
-      );
-      if (index >= 0) {
-        state.total -= state.items[index].quantity * state.items[index].price;
-        state.items.splice(index, 1);
-      }
-    },
+  initialState: {
+    items: [],
+    total: 0,
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      // Fetch cart
+      .addCase(fetchCart.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCart.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.items;  // Ensure your response returns `items`
+        state.total = action.payload.totalPrice;  // Ensure your response returns `totalPrice`
+      })
+      .addCase(fetchCart.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Add item to cart
+      .addCase(addToCart.fulfilled, (state, action) => {
+        const items = action.payload.items || []; // Ensure items is always an array
+        if (items.length === 0) {
+          console.warn("No items in payload to add to cart.");
+          return; // Exit early if no items are provided
+        }
+      
+        const item = items[0]; // Safely access the first item
+        const existingItem = state.items.find((i) => i.product._id === item.product._id);
+      
+        if (existingItem) {
+          existingItem.quantity += item.quantity;
+        } else {
+          state.items.push(item);
+        }
+
+        state.total = state.items.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
+      })
+      .addCase(addToCart.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      // Remove item from cart
+      .addCase(removeFromCart.fulfilled, (state, action) => {
+        state.items = state.items.filter((item) => item.product._id !== action.payload);
+        state.total = state.items.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
+      })
+      .addCase(removeFromCart.rejected, (state, action) => {
+        state.error = action.payload;
+      });
   },
 });
-
-export const { setCart, addItem, updateItem, removeItem } = cartSlice.actions;
-
-export const fetchCart = () => async (dispatch) => {
-  try {
-    const response = await api.get("/cart");
-    dispatch(setCart(response.data));
-  } catch (error) {
-    console.error("Failed to fetch cart:", error);
-  }
-};
-
-export const addToCart = (item) => async (dispatch) => {
-  try {
-    const response = await api.post("/cart", item);
-    dispatch(addItem(response.data));
-  } catch (error) {
-    console.error("Failed to add item to cart:", error);
-  }
-};
-
-export const updateCartItem = (id, quantity) => async (dispatch) => {
-  try {
-    const response = await api.put(`/cart/${id}`, { quantity });
-    dispatch(updateItem(response.data));
-  } catch (error) {
-    console.error("Failed to update cart item:", error);
-  }
-};
-
-export const removeFromCart = (id) => async (dispatch) => {
-  try {
-    await api.delete(`/cart/${id}`);
-    dispatch(removeItem({ _id: id }));
-  } catch (error) {
-    console.error("Failed to remove cart item:", error);
-  }
-};
 
 export default cartSlice.reducer;

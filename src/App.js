@@ -11,6 +11,7 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Register from "./pages/Register";
+import ProfilePage from "./components/ProfilePage";
 
 console.log("Home:", Home);
 console.log("ProductDetails:", ProductDetails);
@@ -28,6 +29,7 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller" element={<SellerDashboard />} />
         <Route path="/customer" element={<CustomerDashboard />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
       <Footer />
     </>

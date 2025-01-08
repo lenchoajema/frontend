@@ -28,7 +28,9 @@ const AdminDashboard = () => {
   // Delete user
   const handleDeleteUser = async (id) => {
     try {
+      console.log("Deleting user from front end.");
       await api.delete(`/admin/users/${id}`);
+      console.log("User deleted successfully from front end.");
       setUsers(users.filter((user) => user._id !== id));
     } catch (error) {
       console.error("Failed to delete user:", error);

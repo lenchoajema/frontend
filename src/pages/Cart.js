@@ -1,23 +1,27 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchCart, updateCartItem, removeFromCart } from "../redux/cartSlice";
+import { fetchCart, removeFromCart } from "../redux/cartSlice";
 import CartItem from "../components/CartItem";
 
 const Cart = () => {
   const dispatch = useDispatch();
-  const { items, total } = useSelector((state) => state.cart);
+  const { items, total, loading, error } = useSelector((state) => state.cart);
 
   useEffect(() => {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const handleUpdateQuantity = (id, quantity) => {
-    dispatch(updateCartItem(id, quantity));
-  };
-
   const handleRemoveItem = (id) => {
     dispatch(removeFromCart(id));
   };
+
+  if (loading) {
+    return <p>Loading your cart...</p>;
+  }
+
+  if (error) {
+    return <p>Error fetching cart: {error.message}</p>;
+  }
 
   return (
     <div className="cart-page">
@@ -29,9 +33,8 @@ const Cart = () => {
           <div className="cart-items">
             {items.map((item) => (
               <CartItem
-                key={item._id}
+                key={item.product._id}
                 item={item}
-                onUpdateQuantity={handleUpdateQuantity}
                 onRemove={handleRemoveItem}
               />
             ))}
