@@ -12,6 +12,7 @@ const Home = () => {
       try {
         const response = await api.get("/products");
         setProducts(response.data);
+        console.log("Products:", response.data);
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {

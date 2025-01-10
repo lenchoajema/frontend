@@ -1,87 +1,126 @@
 import React, { useState, useEffect } from "react";
 
+const formStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  maxWidth: '400px',
+  margin: '0 auto',
+  padding: '20px',
+  border: '1px solid #ccc',
+  borderRadius: '5px',
+  backgroundColor: '#f9f9f9'
+};
+
+const inputStyle = {
+  padding: '10px',
+  borderRadius: '5px',
+  border: '1px solid #ccc',
+  fontSize: '16px'
+};
+
+const textareaStyle = {
+  padding: '10px',
+  borderRadius: '5px',
+  border: '1px solid #ccc',
+  fontSize: '16px',
+  minHeight: '100px'
+};
+
+const fileInputStyle = {
+  padding: '10px',
+  borderRadius: '5px',
+  border: '1px solid #ccc',
+  fontSize: '16px'
+};
+
+const buttonStyle = {
+  padding: '10px 20px',
+  borderRadius: '5px',
+  border: 'none',
+  backgroundColor: '#007bff',
+  color: '#fff',
+  fontSize: '16px',
+  cursor: 'pointer'
+};
+
 const ProductForm = ({ onSubmit, editingProduct, isEditing, cancelEdit }) => {
-  const [product, setProduct] = useState({
-    name: "",
-    price: "",
-    stock: "",
-    description: "",
-  });
-  const [errors, setErrors] = useState({});
-
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [stock, setStock] = useState("");
+  const [pictures, setPictures] = useState([]);
+  
   useEffect(() => {
-    if (editingProduct) {
-      setProduct(editingProduct);
-    } else {
-      setProduct({ name: "", price: "", stock: "", description: "" });
+    if (isEditing && editingProduct) {
+      setName(editingProduct.name);
+      setPrice(editingProduct.price);
+      setDescription(editingProduct.description);
+      setStock(editingProduct.stock);
+      setPictures(editingProduct.pictures || []);
     }
-  }, [editingProduct]);
+  }, [isEditing, editingProduct]);
 
-  const validate = () => {
-    const newErrors = {};
-    if (!product.name) newErrors.name = "Product name is required";
-    if (!product.price || product.price <= 0)
-      newErrors.price = "Price must be greater than zero";
-    if (!product.stock || product.stock < 0)
-      newErrors.stock = "Stock must be zero or more";
-    return newErrors;
+  const handleFileChange = (event) => {
+    setPictures([...event.target.files]);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newErrors = validate();
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-    } else {
-      setErrors({});
-      onSubmit(product);
-      setProduct({ name: "", price: "", stock: "", description: "" });
-    }
+    const newProduct = { name, price, description, stock, pictures };
+    onSubmit(newProduct);
+    setName("");
+    setPrice("");
+    setDescription("");
+    setStock("");
+    setPictures([]);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="product-form">
-      <h2>{isEditing ? "Edit Product" : "Add Product"}</h2>
+    <form onSubmit={handleSubmit} style={formStyle}>
+      <h3>{isEditing ? "Edit Product" : "Add Product"}</h3>
       <input
         type="text"
-        name="name"
-        value={product.name}
-        onChange={(e) => setProduct({ ...product, name: e.target.value })}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         placeholder="Product Name"
+        required
+        style={inputStyle}
       />
-      {errors.name && <span className="error">{errors.name}</span>}
-
       <input
         type="number"
-        name="price"
-        value={product.price}
-        onChange={(e) => setProduct({ ...product, price: e.target.value })}
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
         placeholder="Price"
+        required
+        style={inputStyle}
       />
-      {errors.price && <span className="error">{errors.price}</span>}
-
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description"
+        style={textareaStyle}
+      />
       <input
         type="number"
-        name="stock"
-        value={product.stock}
-        onChange={(e) => setProduct({ ...product, stock: e.target.value })}
-        placeholder="Stock"
+        value={stock}
+        onChange={(e) => setStock(e.target.value)}
+        placeholder="Stock Quantity"
+        required
+        style={inputStyle}
       />
-      {errors.stock && <span className="error">{errors.stock}</span>}
-
-      <textarea
-        name="description"
-        value={product.description}
-        onChange={(e) =>
-          setProduct({ ...product, description: e.target.value })
-        }
-        placeholder="Description"
+      <input
+        type="file"
+        name="pictures"
+        multiple
+        onChange={handleFileChange}
+        accept="image/*"
+        style={fileInputStyle}
       />
-      <button type="submit">
-        {isEditing ? "Update Product" : "Add Product"}
-      </button>
-      {isEditing && <button onClick={cancelEdit}>Cancel</button>}
+      <button type="submit" style={buttonStyle}>{isEditing ? "Update Product" : "Add Product"}</button>
+      {isEditing && <button type="button" onClick={cancelEdit} style={buttonStyle}>Cancel</button>}
     </form>
   );
 };
+
 export default ProductForm;
