@@ -10,6 +10,8 @@ This is the backend service for the E-commerce project. It provides APIs for use
 - Express.js
 - MongoDB
 - JWT for authentication
+- Multer for file uploads
+- bcryptjs for password hashing
 
 ## Getting Started
 
