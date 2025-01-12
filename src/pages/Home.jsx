@@ -5,14 +5,17 @@ import ProductCard from "../components/ProductCard";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const response = await api.get("/products");
         setProducts(response.data);
+        setAllProducts(response.data);
         console.log("Products:", response.data);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -24,13 +27,32 @@ const Home = () => {
   }, []);
 
   const handleSearch = () => {
-    const filteredProducts = products.filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    if (filteredProducts.length === 0) {
-      alert("No product with this name");
+    if (!searchTerm && !selectedCategory) {
+      setProducts(allProducts);
+      return;
     }
-    setProducts(filteredProducts);
+
+    const filteredProducts = allProducts.filter((product) => {
+      const matchesSearchTerm = product.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        !selectedCategory || product.category === selectedCategory;
+
+      return matchesSearchTerm && matchesCategory;
+    });
+
+    if (filteredProducts.length !== 0) {
+      setProducts(filteredProducts);
+    } else {
+      alert("No products match the search criteria.");
+    }
+  };
+
+  const handleCancel = () => {
+    setSearchTerm("");
+    setSelectedCategory("");
+    setProducts(allProducts);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -44,7 +66,7 @@ const Home = () => {
         <button className="cta-btn">Shop Now</button>
       </section>
 
-      {/* Search Section */}
+      {/* Search and Filter Section */}
       <section className="search">
         <input
           type="text"
@@ -52,7 +74,17 @@ const Home = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          <option value="electronics">Electronics</option>
+          <option value="fashion">Fashion</option>
+          <option value="home">Home</option>
+        </select>
         <button onClick={handleSearch}>Search</button>
+        <button onClick={handleCancel}>Cancel</button>
       </section>
 
       <section className="featured-products">
