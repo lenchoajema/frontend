@@ -23,7 +23,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux"; // Import Redux Provider
 import store from "./redux/store.js"; // Import your Redux store
-import "./index.css";
+//import "./index.css";
 import App from "./App.js";
 import AuthProvider from "./context/AuthContext";
 

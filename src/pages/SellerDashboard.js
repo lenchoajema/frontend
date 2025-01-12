@@ -13,7 +13,7 @@ const SellerDashboard = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/products/seller/product/', {
+        const response = await api.get('/products/seller/product', {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
                  });
           setProducts(response.data);

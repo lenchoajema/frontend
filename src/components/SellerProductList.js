@@ -14,7 +14,7 @@ const SellerProductList = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        const response = await api.get('/seller/products', {
+        const response = await api.get('products/seller/product', {
           params: { page },
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -33,13 +33,20 @@ const SellerProductList = () => {
 
   const deleteProduct = async (productId) => {
     try {
-      await api.delete(`/seller/product/${productId}`);
+      const token = localStorage.getItem('token');
+     const resp = await api.delete(`products/seller/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Delete product response:', resp.data);
+          alert('Product deleted successfully');
+      
       setProducts(products.filter((product) => product._id !== productId));
     } catch (error) {
       setError('Error deleting product');
       console.error('Error deleting product:', error);
     }
   };
+  const serverBaseUrl = "http://localhost:5000"; // Base URL of your backend
 
   return (
     <div className="seller-product-list">
@@ -56,11 +63,36 @@ const SellerProductList = () => {
             products.map((product) => (
               <div key={product._id} className="product-item">
                 <div className="product-details">
-                  <img
+                {product.pictures && product.pictures.length > 0 ? (
+                            product.pictures.map((picture, index) => {
+                              // Extract the last folder, which is 'upload'
+                              const relativePath = picture.includes("upload") ? picture.split("upload").pop() : picture;
+                              if (index === 0) {
+                                console.log("relativePath", relativePath);
+                                return (
+                                <img
+                                  key={index}
+                                  title={relativePath.split('/').pop()}
+                                  src={`${serverBaseUrl}/upload${relativePath}`} // Ensure the full URL is reconstructed
+                                  alt={`${product.name}-${index}`}
+                                  className="product-image"
+                                />
+                                );
+                                
+                                
+
+
+                              }
+                              return null;
+                            })
+                          ) : (
+                            <p>No images available</p>
+                          )}
+                  {/* <img
                     src={product.pictures[0]}
                     alt={product.name}
                     className="product-image"
-                  />
+                  /> */}
                   <div>
                     <h3>{product.name}</h3>
                     <p>${product.price}</p>

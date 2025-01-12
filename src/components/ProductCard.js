@@ -3,7 +3,7 @@ import { Button } from "react-bootstrap";
 import { addToCart } from "../redux/cartSlice";
 import { useDispatch } from "react-redux";
 import "./ProductCard.css";
-import cartItem from "./CartItem";
+//import cartItem from "./CartItem";
 
 const ProductCard = ({ product }) => {
   const serverBaseUrl = "http://localhost:5000"; // Base URL of your backend
@@ -32,31 +32,31 @@ const ProductCard = ({ product }) => {
   return (
     <div className="product-card">
       <div className="product-images">
-        {product.pictures && product.pictures.length > 0 ? (
-          product.pictures.map((picture, index) => {
-            // Extract the last folder, which is 'upload'
-            const relativePath = picture.includes("upload") ? picture.split("upload").pop() : picture;
-            if (index === 0) {
-              console.log("relativePath", relativePath);
-              return (
-              <img
-                key={index}
-                title={relativePath.split('/').pop()}
-                src={`${serverBaseUrl}/upload${relativePath}`} // Ensure the full URL is reconstructed
-                alt={`${product.name}-${index}`}
-                className="product-image"
-              />
-              );
-              
-              
+                          {product.pictures && product.pictures.length > 0 ? (
+                            product.pictures.map((picture, index) => {
+                              // Extract the last folder, which is 'upload'
+                              const relativePath = picture.includes("upload") ? picture.split("upload").pop() : picture;
+                              if (index === 0) {
+                                console.log("relativePath", relativePath);
+                                return (
+                                <img
+                                  key={index}
+                                  title={relativePath.split('/').pop()}
+                                  src={`${serverBaseUrl}/upload${relativePath}`} // Ensure the full URL is reconstructed
+                                  alt={`${product.name}-${index}`}
+                                  className="product-image"
+                                />
+                                );
+                                
+                                
 
 
-            }
-            return null;
-          })
-        ) : (
-          <p>No images available</p>
-        )}
+                              }
+                              return null;
+                            })
+                          ) : (
+                            <p>No images available</p>
+                          )}
         <Button variant="primary" onClick={handleAddToCart}>
                           Add to Cart
                   </Button>
