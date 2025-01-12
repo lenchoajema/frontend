@@ -9,6 +9,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -44,6 +45,7 @@ const Home = () => {
 
     if (filteredProducts.length !== 0) {
       setProducts(filteredProducts);
+      setSearchPerformed(true);
     } else {
       alert("No products match the search criteria.");
     }
@@ -53,6 +55,7 @@ const Home = () => {
     setSearchTerm("");
     setSelectedCategory("");
     setProducts(allProducts);
+    setSearchPerformed(false);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -84,7 +87,7 @@ const Home = () => {
           <option value="home">Home</option>
         </select>
         <button onClick={handleSearch}>Search</button>
-        <button onClick={handleCancel}>Cancel</button>
+        {searchPerformed && <button onClick={handleCancel}>Cancel</button>}
       </section>
 
       <section className="featured-products">
