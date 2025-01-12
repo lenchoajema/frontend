@@ -1,4 +1,4 @@
-// ./controllers/cartController.js
+/*// ./controllers/cartController.js
 const Cart = require("../models/Cart"); // Assuming a Cart model exists
 
 // Add item to cart
@@ -11,6 +11,7 @@ exports.addToCart = async (req, res) => {
 
     if (!cart) {
       cart = new Cart({ userId, items: [] });
+      console.log("Cart created:", cart);
     }
 
     const itemIndex = cart.items.findIndex((item) => item.productId.toString() === productId);
@@ -20,8 +21,9 @@ exports.addToCart = async (req, res) => {
     } else {
       cart.items.push({ productId, quantity });
     }
-
+    console.log("itemIndex", itemIndex);  
     await cart.save();
+    console.log("Cart saved successfully.");
     res.status(200).json({ message: "Item added to cart", cart });
   } catch (error) {
     res.status(500).json({ message: "Failed to add item to cart", error: error.message });
@@ -65,10 +67,10 @@ exports.removeFromCart = async (req, res) => {
     res.status(500).json({ message: "Failed to remove item from cart", error: error.message });
   }
 };
+*/
 
 
-
-/*const Cart = require('../models/Cart');
+const Cart = require('../models/Cart');
 const Product = require('../models/productModel');
 
 // Fetch the user's cart
@@ -106,8 +108,7 @@ const addToCart = async (req, res) => {
 
     // Check if the product is already in the cart
     const existingItem = cart.items.find(
-      (item) => item.productId._id.toString() === productId
-    );
+      (item) => item.productId && item.productId._id.toString() === productId);
 
     if (existingItem) {
       // Update the quantity
@@ -121,10 +122,10 @@ const addToCart = async (req, res) => {
     cart.totalPrice = cart.items.reduce((acc, item) => {
       console.log("Item:", item);
       console.log("Product Price:", item.productId?.price);
-      const itemPrice = item.productId?.price || 0;
+      const itemPrice = item.productId && item.productId.price ? item.productId.price : 0;
       return acc + item.quantity * itemPrice;
     }, 0);
-
+   
     console.log("Updated Cart Total Price:", cart.totalPrice);
 
     // Save the updated cart
@@ -193,4 +194,3 @@ const updateCartItem = async (req, res) => {
 };
 
 module.exports = { getCart, addToCart, removeFromCart, updateCartItem };
-*/
