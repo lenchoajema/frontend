@@ -11,6 +11,11 @@ const Cart = () => {
     dispatch(fetchCart());
   }, [dispatch]);
 
+  useEffect(() => {
+    console.log("Cart items:", items);
+    
+  }, [items]);
+
   const handleRemoveItem = (id) => {
     dispatch(removeFromCart(id));
   };
@@ -26,19 +31,25 @@ const Cart = () => {
   return (
     <div className="cart-page">
       <h1>Shopping Cart</h1>
-      {items.length === 0 ? (
+      {items && items.length === 0 ? (
         <p>Your cart is empty</p>
       ) : (
         <>
           <div className="cart-items">
+            <p></p>
             {items.map((item) => (
-              <CartItem
-                key={item.product._id}
-                item={item}
-                onRemove={handleRemoveItem}
-              />
+              item && item.product && item.product._id ? (
+                <CartItem
+                  key={item.product._id}
+                  item={item}
+                  onRemove={handleRemoveItem}
+                />
+              ) : (
+                <p key={item._id || Math.random()}>Invalid product</p>
+              )
             ))}
           </div>
+
           <h3>Total: ${total.toFixed(2)}</h3>
         </>
       )}

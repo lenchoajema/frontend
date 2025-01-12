@@ -1,102 +1,28 @@
-/* Body Styling for Login Page */
-body.login-page {
-  font-family: "Arial", sans-serif;
-  background: linear-gradient(
-    135deg,
-    #ff7e5f,
-    #feb47b
-  ); /* Dynamic background */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+/* General Styling */
+body {
   margin: 0;
+  padding: 0;
+  font-family: "Arial", sans-serif;
+  background: linear-gradient(120deg, #d7f8e3, #8fd3f4); /* Beautiful gradient */
+  height: 100vh;
+  display: flex;
+  align-items: top;
+  justify-content: center;
 }
 
-/* Container for Login */
+/* Login Container */
 .login-container {
-  background-color: #ffffff; /* Clean background */
+  background: rgba(255, 255, 255, 0.9); /* Transparent white box */
   padding: 2rem;
-  border-radius: 12px; /* Rounded corners */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
+  border-radius: 10px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
   width: 100%;
   max-width: 400px;
-  text-align: center;
-  animation: fadeIn 0.8s ease-in-out; /* Fade-in effect */
+  animation: fadeIn 1s ease-in-out;
 }
 
-/* Header */
-.login-container h1 {
-  margin-bottom: 1.5rem;
-  font-size: 1.8rem;
-  color: #333333;
-  font-weight: bold;
-}
-
-/* Form Layout */
-.login-container form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.2rem; /* Gap between form elements */
-}
-
-/* Input Fields */
-.login-container input[type="text"],
-.login-container input[type="password"] {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px; /* Rounded inputs */
-  font-size: 1rem;
-  width: 100%; /* Full width */
-  transition: border-color 0.3s ease; /* Smooth hover */
-}
-
-/* Input Focus Styling */
-.login-container input[type="text"]:focus,
-.login-container input[type="password"]:focus {
-  border-color: #007bff;
-  outline: none;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-}
-
-/* Button Styling */
-.login-container button {
-  padding: 0.75rem;
-  background-color: #007bff;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  width: 100%; /* Full width button */
-  transition: background-color 0.3s ease, transform 0.2s ease; /* Hover and click effects */
-}
-
-.login-container button:hover {
-  background-color: #0056b3;
-  transform: scale(1.05); /* Slightly enlarge on hover */
-}
-
-.login-container button:active {
-  transform: scale(0.98); /* Click effect */
-}
-
-/* Forgot Password Link */
-.login-container .forgot-password {
-  margin-top: 1rem;
-  font-size: 0.875rem;
-  color: #007bff;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.login-container .forgot-password:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-/* Keyframe for Fade-in Animation */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -108,28 +34,85 @@ body.login-page {
   }
 }
 
-/* Responsive Design */
-@media (max-width: 576px) {
-  .login-container {
-    padding: 1.5rem;
-  }
+/* Titles */
+.login-title {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
 
-  .login-container h1 {
-    font-size: 1.5rem;
-  }
+.login-subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
 
-  .login-container input[type="text"],
-  .login-container input[type="password"] {
-    font-size: 0.9rem;
-    padding: 0.6rem;
-  }
+/* Form */
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
 
-  .login-container button {
-    font-size: 0.9rem;
-    padding: 0.6rem;
-  }
+label {
+  font-size: 0.9rem;
+  color: #555;
+}
 
-  .login-container .forgot-password {
-    font-size: 0.8rem;
-  }
+input {
+  width: 100%;
+  padding: 0.8rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #84fab0;
+  box-shadow: 0 0 5px rgba(132, 250, 176, 0.5);
+}
+
+/* Button */
+.login-button {
+  background: #84fab0;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease-in-out;
+  width: 100%;
+}
+
+.login-button:hover {
+  background: #72e1a6;
+}
+
+/* Footer Links */
+.login-footer {
+  margin-top: 1rem;
+}
+
+.forgot-password,
+.create-account {
+  display: block;
+  font-size: 0.9rem;
+  color: #555;
+  text-decoration: none;
+  margin-top: 0.5rem;
+}
+
+.forgot-password:hover,
+.create-account:hover {
+  text-decoration: underline;
+  color: #333;
+}
+
+/* Error Message */
+.error-message {
+  color: red;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
 }

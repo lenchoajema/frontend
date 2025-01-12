@@ -48,7 +48,7 @@ import { useNavigate } from "react-router-dom"; // For navigation
 import { useDispatch } from "react-redux"; // For Redux actions
 import { login } from "../redux/authSlice"; // Redux slice for login action
 import api from "../services/api"; // API service
-
+import "./styles.css";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -81,11 +81,13 @@ const Login = () => {
   };
 
   return (
-      <div className="text-center">
-         <h2>Login</h2>
-          {error && <p style={{ color: "red" }}>{error}</p>} {/* Display error */}
-          <form onSubmit={handleLogin}>
-          <div>
+    <div className="login-page">
+      <div className="login-container">
+        <h2 className="login-title">Welcome Back!</h2>
+        <p className="login-subtitle">Please log in to continue</p>
+        {error && <p className="error-message">{error}</p>} {/* Display error */}
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="form-group">
             <label>Email:</label>
             <input
               type="email"
@@ -95,22 +97,30 @@ const Login = () => {
               required
             />
           </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-          />
+          <div className="form-group">
+            <label>Password:</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" className="login-button">
+            Login
+          </button>
+        </form>
+        <div className="login-footer">
+          <a href="/" className="forgot-password">
+            Forgot Password?
+          </a>
+          <a href="/register" className="create-account">
+            Create an account
+          </a>
         </div>
-        <button type="submit">Login</button>
-      </form>
-      <a href="/" className="forgot-password">Forgot Password?</a>
+      </div>
     </div>
-   
   );
 };
-
 export default Login;

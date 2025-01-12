@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./Home.css";
+import "./styles.css";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 

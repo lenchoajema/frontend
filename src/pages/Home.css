@@ -57,6 +57,52 @@
 }
 
 /* Responsive Adjustments */
+@media (min-width: 1200px) {
+  .hero {
+    padding: 70px 30px; /* Increase padding for larger screens */
+  }
+
+  .hero h1 {
+    font-size: 3rem; /* Increase font size for larger screens */
+  }
+
+  .hero p {
+    font-size: 1.5rem; /* Increase paragraph font size */
+  }
+
+  .cta-btn {
+    font-size: 1.2rem; /* Increase button font size */
+    padding: 12px 24px; /* Increase button padding */
+  }
+
+  .featured-products h2 {
+    font-size: 2.5rem; /* Increase heading size */
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1199px) {
+  .hero {
+    padding: 60px 25px; /* Adjust padding for medium screens */
+  }
+
+  .hero h1 {
+    font-size: 2.8rem; /* Adjust font size for medium screens */
+  }
+
+  .hero p {
+    font-size: 1.3rem; /* Adjust paragraph font size */
+  }
+
+  .cta-btn {
+    font-size: 1.1rem; /* Adjust button font size */
+    padding: 11px 22px; /* Adjust button padding */
+  }
+
+  .featured-products h2 {
+    font-size: 2.2rem; /* Adjust heading size */
+  }
+}
+
 @media (max-width: 768px) {
   .hero {
     padding: 30px 15px; /* Reduce padding on smaller screens */

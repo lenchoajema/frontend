@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import api from "../services/api"; // API service
-//import "./Register.css";
+import "./styles.css";
 const Register = () => {
     const [formData, setFormData] = useState({
         username: "",
@@ -70,75 +70,88 @@ const Register = () => {
     };
 
     return (
-        <Container>
-            <Row className="justify-content-md-center">
-                <Col xs={12} md={6}>
-                    <h2 className="text-center">Register</h2>
-                    {serverError && <p style={{ color: "red" }}>{serverError}</p>}
-                    <Form onSubmit={handleSubmit}>
-                        <Form.Group controlId="formUsername">
-                            <Form.Label>Username</Form.Label>
-                            <Form.Control
-                                type="text"
-                                name="username"
-                                value={formData.username}
-                                onChange={handleChange}
-                                placeholder="Enter username"
-                                isInvalid={!!errors.username}
-                                required
-                            />
-                            <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>
-                        </Form.Group>
-
-                        <Form.Group controlId="formEmail">
-                            <Form.Label>Email address</Form.Label>
-                            <Form.Control
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="Enter email"
-                                isInvalid={!!errors.email}
-                                required
-                            />
-                            <Form.Control.Feedback type="invalid">{errors.email}</Form.Control.Feedback>
-                        </Form.Group>
-
-                        <Form.Group controlId="formPassword">
-                            <Form.Label>Password</Form.Label>
-                            <Form.Control
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="Password"
-                                isInvalid={!!errors.password}
-                                required
-                            />
-                            <Form.Control.Feedback type="invalid">{errors.password}</Form.Control.Feedback>
-                        </Form.Group>
-
-                        <Form.Group controlId="formConfirmPassword">
-                            <Form.Label>Confirm Password</Form.Label>
-                            <Form.Control
-                                type="password"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                placeholder="Confirm Password"
-                                isInvalid={!!errors.confirmPassword}
-                                required
-                            />
-                            <Form.Control.Feedback type="invalid">{errors.confirmPassword}</Form.Control.Feedback>
-                        </Form.Group>
-
-                        <Button variant="primary" type="submit" block>
-                            Register
-                        </Button>
-                    </Form>
-                </Col>
-            </Row>
-        </Container>
+        <Container className="registration-page">
+        <Row className="justify-content-md-center">
+          <Col xs={12} md={6}>
+            <div className="registration-container">
+              <h2 className="text-center">Register</h2>
+              <p className="text-center registration-subtitle">
+                Create your account to explore the best products!
+              </p>
+              {serverError && <p className="error-message">{serverError}</p>}
+              <Form onSubmit={handleSubmit}>
+                <Form.Group controlId="formUsername">
+                  <Form.Label>Username</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="Enter username"
+                    isInvalid={!!errors.username}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.username}
+                  </Form.Control.Feedback>
+                </Form.Group>
+  
+                <Form.Group controlId="formEmail">
+                  <Form.Label>Email address</Form.Label>
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter email"
+                    isInvalid={!!errors.email}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email}
+                  </Form.Control.Feedback>
+                </Form.Group>
+  
+                <Form.Group controlId="formPassword">
+                  <Form.Label>Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter password"
+                    isInvalid={!!errors.password}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.password}
+                  </Form.Control.Feedback>
+                </Form.Group>
+  
+                <Form.Group controlId="formConfirmPassword">
+                  <Form.Label>Confirm Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm password"
+                    isInvalid={!!errors.confirmPassword}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.confirmPassword}
+                  </Form.Control.Feedback>
+                </Form.Group>
+  
+                <Button variant="primary" type="submit" block>
+                  Register
+                </Button>
+              </Form>
+            </div>
+          </Col>
+        </Row>
+      </Container>
     );
 };
 

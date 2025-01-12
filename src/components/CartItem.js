@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
+  console.log("CartItem rendered for product:", item.product.name);
   const { product, quantity: initialQuantity } = item; // Use destructuring if item contains a product object
   const [quantity, setQuantity] = useState(initialQuantity);
 
@@ -12,6 +13,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
 
   return (
     <div className="cart-item">
+      <p>This is a Cart Item</p>
       <img src={product.image || "/placeholder.png"} alt={product.name} />
       <div className="cart-item-details">
         <h4>{product.name}</h4>
