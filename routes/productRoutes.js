@@ -88,6 +88,41 @@ router.get('/search', async (req, res) => {
         res.status(500).json({ message: 'Error fetching products', error });
     }
 });
+router.get('/search', async (req, res) => {
+  const { query, category, minPrice, maxPrice, rating } = req.query;
+
+  const filter = {};
+
+  // Add search query
+  if (query) {
+      filter.name = { $regex: query, $options: 'i' };
+  }
+
+  // Add category filter
+  if (category) {
+      filter.category = category;
+  }
+
+  // Add price range filter
+  if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+  }
+
+  // Add rating filter
+  if (rating) {
+      filter.rating = { $gte: parseFloat(rating) }; // Minimum rating
+  }
+
+  try {
+      const products = await Product.find(filter);
+      res.json(products);
+  } catch (error) {
+      res.status(500).json({ message: 'Error fetching products', error });
+  }
+});
+
 
 
 module.exports = router;
