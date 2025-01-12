@@ -71,5 +71,23 @@ router.delete('/seller/:id', authenticateUser, authorizeRoles('seller'), (req, r
   const productId = req.params.id;
   deleteProduct(req, res, { seller: sellerId, _id: productId });
 });
+const Product = require('../models/productModel'); // Import your Product model
+
+// GET /api/products/search?query=your_search_term
+router.get('/search', async (req, res) => {
+    const { query } = req.query; // Get the search term from query parameters
+
+    try {
+        // Perform a case-insensitive search
+        const products = await Product.find({
+            name: { $regex: query, $options: 'i' } // Search by product name
+        });
+
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching products', error });
+    }
+});
+
 
 module.exports = router;
