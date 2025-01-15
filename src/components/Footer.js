@@ -5,7 +5,7 @@ const Footer = () => {
     return (
         <footer className="footer">
             <div className="footer-content">
-                <p>&copy; {new Date().getFullYear()} LenCenter. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} LenCenter. All rights reserved. Do one thing every day that scares you. Well done is better than well said. </p>
                 <ul className="footer-columns">
                     <li><a href="/about">About Us</a></li>
                     <li><a href="/contact">Contact</a></li>
