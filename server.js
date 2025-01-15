@@ -11,6 +11,19 @@ const userRoutes = require("./routes/userRoutes");
 //const sellerProductRoutes = require('./routes/seller/productRoute');
 const productRoutes = require("./routes/productRoutes");
 const path = require('path');
+const redisClient = require("./utils/redisClient");
+const ordersRoutes = require('./routes/ordersRoutes');
+
+if (!redisClient.isOpen) {
+  (async () => {
+    try {
+      await redisClient.connect();
+      console.log("Redis client connected successfully");
+    } catch (err) {
+      console.error("Error connecting to Redis:", err);
+    }
+  })();
+}
 
 
 dotenv.config();
@@ -29,10 +42,11 @@ app.use('/api/auth', authRoutes); // Authentication routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 // Cart Routes (Updated for consistency)
-app.use('/api/cart', cartRoutes);  
+//app.use('/api/cart', cartRoutes);  
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use('/api/user/cart', cartRoutes);
+app.use('/api/orders', ordersRoutes);
 app.use((req, res) => {
   console.log(`Unhandled request: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ message: "Route not found" });
