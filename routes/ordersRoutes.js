@@ -2,7 +2,8 @@ const express = require("express");
 const { 
   placeOrder, 
   getOrderHistory, 
-  getAllOrders, 
+  getAllOrders,
+  getOrderDetail, 
   updateOrderStatus 
 } = require("../controllers/orderController");
 const { authenticateUser, authorizeRoles } = require("../middleware/authMiddleware");
@@ -12,6 +13,8 @@ const router = express.Router();
 // Customer Routes
 router.post("/", authenticateUser, placeOrder); // Place an order
 router.get("/", authenticateUser, getOrderHistory); // View order history
+router.get("/:orderId",authenticateUser, getOrderDetail);
+
 
 // Admin Routes
 router.get("/admin", authenticateUser, authorizeRoles("admin"), getAllOrders); // Get all orders

@@ -70,8 +70,10 @@ router.post("/", authenticateUser, async (req, res) => {
         productId: product._id.toString(),
         name: product.name,
         price: product.price,
+        pictures: product.pictures,
         quantity,
       });
+      console.log("added item", product); 
     }
 
     // Recalculate the total price for the cart
