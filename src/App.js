@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home";
 import ProductDetails from "./pages/ProductDetails";
 import CartPage from "./pages/CartPage";
@@ -12,13 +12,17 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Register from "./pages/Register";
 import ProfilePage from "./components/ProfilePage";
+import OrderHistory from "./pages/OrderHistory";
+import OrderDetails from "./pages/OrderDetails";
 
 console.log("Home:", Home);
 console.log("ProductDetails:", ProductDetails);
 function App() {
   return (
     <>
-      <Navbar />
+      <Navbar> 
+        <Link to="/orders">Order History</Link>
+      </Navbar>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -30,6 +34,8 @@ function App() {
         <Route path="/seller" element={<SellerDashboard />} />
         <Route path="/customer" element={<CustomerDashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/orders" element={<OrderHistory />} />
+        <Route path="/orders/:orderId" element={<OrderDetails />} />
       </Routes>
       <Footer />
     </>

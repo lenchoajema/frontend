@@ -48,9 +48,9 @@ const CartPage = () => {
  
   
 
-  const getImageUrl = (images) => {
-    if (images && images.length > 0) {
-      return `${axios.defaults.baseURL}/uploads/${images[0]}`;
+  const getImageUrl = (pictures) => {
+    if (pictures && pictures.length > 0) {
+      return `${axios.defaults.baseURL}/uploads/${pictures[0]}`;
     }
     return "https://via.placeholder.com/150"; // Fallback to a placeholder image
   };
@@ -139,7 +139,20 @@ const CartPage = () => {
       alert("Error removing item. Please try again.");
     }
   };
-
+  const placeOrder = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "/api/orders",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Order placed successfully!");
+      setCart({ items: [], total: 0 });
+    } catch (error) {
+      alert("Error placing order. Please try again.", response);
+    }
+  };
  
 
   return (
@@ -152,26 +165,31 @@ const CartPage = () => {
               key={item.productId}
               style={{ border: "1px solid #ddd", padding: "10px", marginBottom: "10px" }}
             >
-              {/* Product Images */}
+              {/* Product pictures */}
               <div style={{ display: "flex", gap: "5px" }}>
-                {item.images && item.images.length > 0 ? (
-                  item.images.map((image, index) => (
-                    <img
-                      key={index}
-                      src={getImageUrl([image])}
-                      alt={`Product image ${index + 1}`}
-                      style={{
-                        width: "50px",
-                        height: "50px",
-                        objectFit: "cover",
-                        border: "1px solid #ccc",
-                      }}
-                    />
-                  ))
+                { Array.isArray(item.pictures) && item.pictures.length > 0 ? (
+                  item.pictures.slice(0, 5).map((picture, index) => {
+                    const relativePath = picture.includes("uploads") ? picture.split("uploads").pop() : picture;
+                    return (
+                      <img
+                        key={index}
+                        title={relativePath.split('/').pop()}
+                        src={`${axios.defaults.baseURL}/uploads/${relativePath}`}
+                        alt={`${item.name}-${index}`}
+                        className="product-image"
+                        style={{
+                          width: "150px",
+                          height: "150px",
+                          objectFit: "cover",
+                          border: "1px solid #ccc",
+                        }}
+                      />
+                    );
+                  })
                 ) : (
                   <img
                     src="https://via.placeholder.com/50"
-                    alt="No image available"
+                    alt="No picture available"
                     style={{
                       width: "50px",
                       height: "50px",
@@ -179,7 +197,11 @@ const CartPage = () => {
                       border: "1px solid #ccc",
                     }}
                   />
-                )}
+                )
+                        
+                        
+
+             }
               </div>
 
               {/* Product Details */}
@@ -200,6 +222,7 @@ const CartPage = () => {
             </div>
           ))}
           <h3>Total: ${cart.total.toFixed(2)}</h3>
+          <button onClick={placeOrder}>Place Order</button>
         </div>
       ) : (
         <p>Your cart is empty.</p>
