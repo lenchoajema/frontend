@@ -69,24 +69,19 @@ const OrderDetails = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Order Details</h1>
-      <div style={styles.orderInfo}>
-        <p><strong>Order ID:</strong> {order._id}</p>
-        <p><strong>Total:</strong> ${order.total}</p>
-        <p><strong>Status:</strong> {order.status}</p>
-        <p><strong>Order Date:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
-      </div>
-
-      <h2 style={styles.subHeader}>Items</h2>
-      <ul style={styles.itemList}>
-        {order.items.map((item) => (
-          <li key={item.productId} style={styles.item}>
-            <p><strong>Product Name:</strong> {item.name}</p>
-            <p><strong>Quantity:</strong> {item.quantity}</p>
-            <p><strong>Price:</strong> ${item.price}</p>
-          </li>
-        ))}
-      </ul>
+      <h1 style={styles.heading}>Order Details</h1>
+        <p>Order ID: {order.orderId}</p>
+        <p>Total: ${order.total}</p>
+        <p>Status: {order.status}</p>
+        <ul style={styles.itemList}>
+          {order.items.map((item, index) => (
+            <li key={index} style={styles.item}>
+              <p>Price: ${item.price}</p>
+              <p>Quantity: {item.quantity}</p>
+              <p>Subtotal: ${item.subtotal}</p>
+            </li>
+          ))}
+        </ul>
 
       <button onClick={handleBack} style={styles.backButton}>
         Back to Order History

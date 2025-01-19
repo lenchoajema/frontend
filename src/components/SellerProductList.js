@@ -1,6 +1,132 @@
-import React, { useState, useEffect } from 'react';
+import React from "react";
+import axios from "axios";
+import "./SellerProductList.css";
+
+const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, totalPages, setPage }) => {
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
+  return (
+    <div className="seller-product-list">
+      <h2>Your Products</h2>
+      {loading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p className="error">{error}</p>
+      ) : (
+        <div>
+          {Array.isArray(products) && products.length === 0 ? (
+            <p>No products available.</p>
+          ) : (
+            Array.isArray(products) &&
+            products.map((product) => (
+              <div key={product._id} className="product-item">
+                <div className="product-details">
+                  {Array.isArray(product.pictures) && product.pictures.length > 0 ? (
+                    product.pictures.slice(0, 5).map((picture, index) => {
+                      const relativePath = picture.includes("uploads") ? picture.split("uploads").pop() : picture;
+                      return (
+                        <img
+                          key={index}
+                          title={relativePath.split("/").pop()}
+                          src={`${axios.defaults.baseURL}/uploads/${relativePath}`}
+                          alt={`${product.name}-${index}`}
+                          className="product-image"
+                          style={{
+                            width: "100px",
+                            height: "100px",
+                            objectFit: "cover",
+                            border: "1px solid #ccc",
+                          }}
+                        />
+                      );
+                    })
+                  ) : (
+                    <p>No image available</p>
+                  )}
+                  <h3>{product.name}</h3>
+                  <button onClick={() => onEdit(product)} className="edit-button">
+                    Edit
+                  </button>
+                  <button onClick={() => onDelete(product._id)} className="delete-button">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      <div className="pagination">
+        <button disabled={page === 1} onClick={() => setPage(page - 1)} className="pagination-button">
+          Previous
+        </button>
+        <span>{page} / {totalPages}</span>
+        <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="pagination-button">
+          Next
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default SellerProductList;
+
+
+
+
+/* import React from "react";
+import "./SellerProductList.css";
+
+const SellerProductList = ({ products, loading, error, onEdit, onDelete }) => {
+  return (
+    <div className="seller-product-list">
+      <h2>Your Products</h2>
+      {loading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p className="error">{error}</p>
+      ) : (
+        <div>
+          {products.length === 0 ? (
+            <p>No products available.</p>
+          ) : (
+
+            Array.isArray(products) && products.map((product) => (
+              <div key={product._id} className="product-item">
+                <div className="product-details">
+                  <h3>{product.name}</h3>
+                  <p>Price: ${product.price}</p>
+                  <p>Stock: {product.stock}</p>
+                </div>
+                <button
+                  onClick={() => onEdit(product)}
+                  className="edit-button"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onDelete(product._id)}
+                  className="delete-button"
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SellerProductList; */
+
+
+
+/* import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import './SellerProductList.css';
+
 
 const SellerProductList = () => {
   const [products, setProducts] = useState([]);
@@ -92,18 +218,17 @@ const SellerProductList = () => {
                     src={product.pictures[0]}
                     alt={product.name}
                     className="product-image"
-                  /> */}
-                  <div>
-                    <h3>{product.name}</h3>
+                  /> */
+                //}
+ /*                 <div>
+      /*              <h3>{product.name}</h3>
                     <p>${product.price}</p>
                     <p><strong>Stock:</strong> {product.stock}</p>
                     <p><strong>Created:</strong> {new Date(product.createdAt).toLocaleDateString()}</p>
                     <p><strong>Last Updated:</strong> {new Date(product.updatedAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <button onClick={() => deleteProduct(product._id)} className="delete-button">
-                  Delete
-                </button>
+             
               </div>
             ))
           )}
@@ -123,3 +248,4 @@ const SellerProductList = () => {
 };
 
 export default SellerProductList;
+ */

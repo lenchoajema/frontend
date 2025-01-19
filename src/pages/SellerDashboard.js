@@ -1,4 +1,296 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import ProductForm from "../components/ProductForm";
+import SellerProductList from "../components/SellerProductList";
+import useSellerProducts from "../hooks/useSellerProducts";
+import "./SellerDashboard.css";
+import api from "../services/api";
+
+const SellerDashboard = () => {
+  const { products, loading, error, fetchProducts, page, totalPages, setPage } = useSellerProducts();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  // Add or update product
+  const handleSaveProduct = async (productData) => {
+    try {
+      const formData = new FormData();
+      formData.append("name", productData.name);
+      formData.append("price", productData.price);
+      formData.append("description", productData.description);
+      formData.append("stock", productData.stock);
+
+      if (productData.pictures && Array.isArray(productData.pictures)) {
+        productData.pictures.forEach((file) => formData.append("pictures", file));
+      }
+
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (productData._id) {
+        // Update product
+        await api.put(`/products/seller/${productData._id}`, formData, { headers });
+      } else {
+        // Create product
+        await api.post("/products", formData, { headers });
+      }
+
+      // Refresh product list and reset editing state
+      fetchProducts();
+      setIsEditing(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Failed to save product:", error);
+    }
+  };
+
+  // Delete a product
+  const handleDeleteProduct = async (id) => {
+    try {
+      await api.delete(`/products/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      fetchProducts();
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+    }
+  };
+
+  return (
+    <div className="seller-dashboard">
+      <h1>Seller Dashboard</h1>
+      <ProductForm
+        onSubmit={handleSaveProduct}
+        editingProduct={editingProduct}
+        isEditing={isEditing}
+        cancelEdit={() => {
+          setIsEditing(false);
+          setEditingProduct(null);
+        }}
+      />
+      <SellerProductList
+        products={products}
+        loading={loading}
+        error={error}
+        onEdit={(product) => {
+          setIsEditing(true);
+          setEditingProduct(product);
+        }}
+        onDelete={handleDeleteProduct}
+        page={page}
+        totalPages={totalPages}
+        setPage={setPage}
+      />
+    </div>
+  );
+};
+
+export default SellerDashboard;
+
+
+/* import React, { useState } from "react";
+import ProductForm from "../components/ProductForm";
+import SellerProductList from "../components/SellerProductList";
+import useSellerProducts from "../hooks/useSellerProducts";
+import "./SellerDashboard.css";
+import api from "../services/api";
+
+const SellerDashboard = () => {
+  const { products, loading, error, fetchProducts } = useSellerProducts();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  // Add or update product
+  const handleSaveProduct = async (productData, isUpdate = false) => {
+    try {
+      const formData = new FormData();
+      formData.append("name", productData.name);
+      formData.append("price", productData.price);
+      formData.append("description", productData.description);
+      formData.append("stock", productData.stock);
+  
+      if (productData.pictures && Array.isArray(productData.pictures)) {
+        productData.pictures.forEach((file) => formData.append("pictures", file));
+        console.log("SDB product.pictures", productData.pictures);
+      }
+  
+      if (isUpdate) {
+        // Update existing product
+        const token = localStorage.getItem("token");
+        const response = await api.put(`/products/seller/${productData._id}`, formData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log("USP response", response);
+        fetchProducts();
+      } else {
+        // Add new product
+        await api.post("/products", formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+      }
+  
+      // Refresh product list after save
+      fetchProducts();
+      setIsEditing(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Failed to save product:", error);
+    }
+  };
+
+  // Delete a product
+  const handleDeleteProduct = async (id) => {
+    try {
+      await api.delete(`/products/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      fetchProducts();
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+    }
+  };
+
+  return (
+    <div className="seller-dashboard">
+      <h1>Seller Dashboard</h1>
+      <ProductForm
+        onSubmit={handleSaveProduct}
+        editingProduct={editingProduct}
+        isEditing={isEditing}
+        cancelEdit={() => {
+          setIsEditing(false);
+          setEditingProduct(null);
+        }}
+      />
+      <SellerProductList
+        products={products}
+        loading={loading}
+        error={error}
+        onEdit={(product) => {
+          setIsEditing(true);
+          setEditingProduct(product);
+          isUpdate(true);
+        }}
+        onDelete={handleDeleteProduct}
+      />
+    </div>
+  );
+};
+
+export default SellerDashboard;
+ */
+
+
+/* import React, { useState } from "react";
+import useSellerProducts from "../hooks/useSellerProducts";
+import ProductForm from "../components/ProductForm";
+import SellerProductList from "../components/SellerProductList";
+import "./SellerDashboard.css";
+
+const SellerDashboard = () => {
+  
+  const { products,
+     addProduct,
+    updateProduct,
+    deleteProduct,
+    loading,
+    error,
+  } = useSellerProducts(); 
+  
+
+
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const handleFormSubmit = (product) => {
+    const formData = new FormData();
+    formData.append("name", product.name);
+    formData.append("price", product.price);
+    formData.append("description", product.description);
+    formData.append("stock", product.stock);
+    product.pictures.forEach((file) => formData.append("pictures", file));
+
+    if (editingProduct) {
+      updateProduct(editingProduct._id, formData);
+      setEditingProduct(null);
+    } else {
+      addProduct(formData);
+    }
+  };
+
+  return (
+    <div className="seller-dashboard">
+      <h1>Seller Dashboard</h1>
+      <ProductForm
+        onSubmit={handleFormSubmit}
+        editingProduct={editingProduct}
+        cancelEdit={() => setEditingProduct(null)}
+      />
+      <SellerProductList
+        products={products}
+        loading={loading}
+        error={error}
+        onEdit={(product) => setEditingProduct(product)}
+        onDelete={deleteProduct}
+      />
+    </div>
+  );
+};
+
+export default SellerDashboard; */
+
+
+
+/* import React, { useState } from "react";
+import useSellerProducts from "../hooks/useSellerProducts";
+import ProductForm from "../components/ProductForm";
+import ProductList from "../components/ProductList";
+import "./SellerDashboard.css";
+
+const SellerDashboard = () => {
+  const { products, addProduct, updateProduct, deleteProduct, fetchProducts } =
+    useSellerProducts();
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const handleFormSubmit = (product) => {
+    const formData = new FormData();
+    formData.append("name", product.name);
+    formData.append("price", product.price);
+    formData.append("description", product.description);
+    formData.append("stock", product.stock);
+    product.pictures.forEach((file) => formData.append("pictures", file));
+
+    if (editingProduct) {
+      updateProduct(editingProduct._id, formData);
+      setEditingProduct(null);
+    } else {
+      addProduct(formData);
+    }
+  };
+
+  return (
+    <div className="seller-dashboard">
+      <h1>Seller Dashboard</h1>
+      <ProductForm
+        onSubmit={handleFormSubmit}
+        editingProduct={editingProduct}
+        cancelEdit={() => setEditingProduct(null)}
+      />
+      <ProductList
+        products={products}
+        onEdit={(product) => setEditingProduct(product)}
+        onDelete={(id) => deleteProduct(id)}
+        fetchProducts={fetchProducts}
+      />
+    </div>
+  );
+};
+
+export default SellerDashboard; */
+
+
+
+
+
+/* import React, { useState, useEffect } from "react";
 import ProductForm from "../components/ProductForm";
 import ProductList from "../components/SellerProductList";
 import api from "../services/api";
@@ -126,4 +418,4 @@ const SellerDashboard = () => {
   );
 };
 
-export default SellerDashboard;
+export default SellerDashboard; */

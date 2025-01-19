@@ -60,6 +60,16 @@
 .delete-button:hover {
   background-color: #ff1a1a;
 }
+.edit-button {
+  padding: 10px 15px;
+  margin-right: 1%;
+  background-color: #ff4d4d;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  align-items: flex-end;
+}
 
 .pagination {
   display: flex;

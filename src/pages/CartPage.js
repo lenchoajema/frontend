@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 
 const CartPage = () => {
   axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
     const [cart, setCart] = useState({ items: [], total: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+     const navigate = useNavigate();
   
     // Fetch cart from backend
     const fetchCart = async () => {
@@ -44,18 +47,13 @@ const CartPage = () => {
     useEffect(() => {
       fetchCart();
     }, []);
+    const handlecheckout = () => {
+      navigate("/checkout", { state: { items: cart.items, total: cart.total } });
+    };
   
- 
   
 
-  const getImageUrl = (pictures) => {
-    if (pictures && pictures.length > 0) {
-      return `${axios.defaults.baseURL}/uploads/${pictures[0]}`;
-    }
-    return "https://via.placeholder.com/150"; // Fallback to a placeholder image
-  };
-
-  /* const updateQuantity = async (productId, quantity) => {
+    /* const updateQuantity = async (productId, quantity) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -149,8 +147,9 @@ const CartPage = () => {
       );
       alert("Order placed successfully!");
       setCart({ items: [], total: 0 });
+      console.log("Order placed:", response.data);
     } catch (error) {
-      alert("Error placing order. Please try again.", response);
+      alert("Error placing order. Please try again.");
     }
   };
  
@@ -189,7 +188,7 @@ const CartPage = () => {
                 ) : (
                   <img
                     src="https://via.placeholder.com/50"
-                    alt="No picture available"
+                    alt="Nothing available"
                     style={{
                       width: "50px",
                       height: "50px",
@@ -223,7 +222,11 @@ const CartPage = () => {
           ))}
           <h3>Total: ${cart.total.toFixed(2)}</h3>
           <button onClick={placeOrder}>Place Order</button>
-        </div>
+          <button onClick={fetchCart}>Refresh Cart</button>
+          <button onClick={handlecheckout} style={styles.checkoutButton}>
+        Checkout
+      </button>
+         </div>
       ) : (
         <p>Your cart is empty.</p>
       )}
@@ -231,4 +234,15 @@ const CartPage = () => {
   );
 };
 
+const styles = {
+   checkoutButton: {
+    marginTop: "20px",
+    padding: "10px 15px",
+    backgroundColor: "#007BFF",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+};
 export default CartPage;
