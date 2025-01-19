@@ -4,7 +4,7 @@ const Product = require('../models/productModel');
 const createProduct = async (req, res) => {
   try {
     const { name, price, description, stock } = req.body;
-
+    console.log("under Create Product function from backend");
     // Extract seller ID from the authenticated user's token
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: 'User not authenticated' });
@@ -30,7 +30,7 @@ const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, price, description, stock } = req.body;
-
+    console.log("Under Update Product from backend");
     // Find the product
     const product = await Product.findById(id);
 

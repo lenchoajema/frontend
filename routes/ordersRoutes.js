@@ -7,6 +7,7 @@ const {
   updateOrderStatus 
 } = require("../controllers/orderController");
 const { authenticateUser, authorizeRoles } = require("../middleware/authMiddleware");
+const { createOrder, captureOrder } = require('../controllers/orderController');
 
 const router = express.Router();
 
@@ -19,5 +20,10 @@ router.get("/:orderId",authenticateUser, getOrderDetail);
 // Admin Routes
 router.get("/admin", authenticateUser, authorizeRoles("admin"), getAllOrders); // Get all orders
 router.put("/admin/:orderId", authenticateUser, authorizeRoles("admin"), updateOrderStatus); // Update order status
+
+
+router.post('/create-order', createOrder); // Create PayPal order
+router.post('/capture-order/:orderID', captureOrder); // Capture PayPal payment
+
 
 module.exports = router;
