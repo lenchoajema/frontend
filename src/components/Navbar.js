@@ -91,7 +91,7 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu }
       <button className="menu-toggle" onClick={toggleMenu}>
         ☰
       </button>
@@ -138,7 +138,7 @@ const Navbar = () => {
             </>
           )}
         </div>
-      )}
+      )} */}
     </nav>
   );
 };
