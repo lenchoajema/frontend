@@ -12,9 +12,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         const [usersResponse, productsResponse] = await Promise.all([
-          api.get("/admin/users"),
-          api.get("/admin/products"),
+          api.get("/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
+          api.get("/admin/products", { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         setUsers(usersResponse.data);
         setProducts(productsResponse.data);
@@ -29,7 +30,8 @@ const AdminDashboard = () => {
   const handleDeleteUser = async (id) => {
     try {
       console.log("Deleting user from front end.");
-      await api.delete(`/admin/users/${id}`);
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      await api.delete(`/admin/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       console.log("User deleted successfully from front end.");
       setUsers(users.filter((user) => user._id !== id));
     } catch (error) {
@@ -40,7 +42,8 @@ const AdminDashboard = () => {
   // Delete product
   const handleDeleteProduct = async (id) => {
     try {
-      await api.delete(`/admin/products/${id}`);
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      await api.delete(`/admin/products/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       setProducts(products.filter((product) => product._id !== id));
     } catch (error) {
       console.error("Failed to delete product:", error);

@@ -1,82 +1,74 @@
-/*import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { login } from "../redux/authSlice";
 import api from "../services/api";
-
-const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const dispatch = useDispatch();
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await api.post("/auth/login", { email, password });
-      dispatch(login(response.data));
-      localStorage.setItem("token", response.data.token);
-    } catch (error) {
-      console.error("Login failed:", error.response.data.message);
-    }
-  };
-
-  return (
-    <form onSubmit={handleLogin}>
-      <h2>Login</h2>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        required
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        required
-      />
-      <button type="submit">Login</button>
-    </form>
-  );
-};
-
-export default Login;
-*/
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // For navigation
-import { useDispatch } from "react-redux"; // For Redux actions
-import { login } from "../redux/authSlice"; // Redux slice for login action
-import api from "../services/api"; // API service
 import "./styles.css";
+import Navbar from "../components/Navbar";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null); // To display errors
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(null); // Reset error state
-
-    try {
-      const response = await api.post("/auth/login", { email, password }); // API call
-      console.log("Login response:", response.data);
-
-      const { role, token, ...user } = response.data; // Destructure response
-      dispatch(login({ user, token })); // Update Redux state
-      localStorage.setItem("token", token); // Save token in localStorage
-
-      // Navigate based on role
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log(token);
+    const role = localStorage.getItem("role");
+    if (token) {
       if (role === "admin") navigate("/admin");
       else if (role === "seller") navigate("/seller");
       else if (role === "customer") navigate("/");
-      else throw new Error("Invalid role."); // Handle unexpected roles
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      const { user } = response.data;
+      const { role } = user;
+      const { token } = response.data;
+      console.log("Login token", token)
+      //const { name } = user;
+      //<Navbar userName={name} userRole={role} />
+      if (rememberMe) {
+      localStorage.setItem("token", token);
+       localStorage.setItem("role", role);
+      } else {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("role", role);
+      } 
+      console.log("Response Data from Login",response.data);
+      dispatch(login({ user, token }));
+      //<Navbar/>
+      console.log("role", role);
+      if (role === "admin") navigate("/admin");
+      else if (role === "seller") navigate("/seller");
+      else if (role === "customer") navigate("/");
+      
     } catch (err) {
-      console.error("Login error:", err);
-      setError(err.response?.data?.message || "Login failed. Please try again."); // Handle errors
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,11 +77,12 @@ const Login = () => {
       <div className="login-container">
         <h2 className="login-title">Welcome Back!</h2>
         <p className="login-subtitle">Please log in to continue</p>
-        {error && <p className="error-message">{error}</p>} {/* Display error */}
+        {error && <p className="error-message">{error}</p>}
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
-            <label>Email:</label>
+            <label htmlFor="email">Email:</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -98,8 +91,9 @@ const Login = () => {
             />
           </div>
           <div className="form-group">
-            <label>Password:</label>
+            <label htmlFor="password">Password:</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -107,8 +101,18 @@ const Login = () => {
               required
             />
           </div>
-          <button type="submit" className="login-button">
-            Login
+          <div className="form-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              Remember Me
+            </label>
+          </div>
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
         <div className="login-footer">
@@ -123,4 +127,5 @@ const Login = () => {
     </div>
   );
 };
+
 export default Login;

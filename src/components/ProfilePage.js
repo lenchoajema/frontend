@@ -14,7 +14,7 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         const response = await api.get("/user/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -35,7 +35,7 @@ const ProfilePage = () => {
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       await api.put("/user/profile", profileData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -57,18 +57,19 @@ const ProfilePage = () => {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
-      await api.put("/user/change-password", { currentPassword: CurrentPassword, newPassword: NewPassword}, {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      await api.put("/user/change-password", { currentPassword: CurrentPassword, newPassword: NewPassword }, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       setCurrentPassword("");
       setNewPassword("");
-
-      setMessage("Password changed successfully!");
+      setMessage("Password changed successfully! Redirecting to login...");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
     } catch (error) {
-    
       setMessage("Failed to change password.");
     } finally {
       setLoading(false);
@@ -85,7 +86,7 @@ const ProfilePage = () => {
   const handleUploadProfilePicture = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const formData = new FormData();
       formData.append("profilePicture", profilePicture);
 
@@ -106,7 +107,13 @@ const ProfilePage = () => {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <img src={profileData.profilePicture || "default-profile.png"} alt="Profile" />
+        <div className="profile-picture-wrapper">
+          <img
+            src={profileData.profilePicture || "default-profile.png"}
+            alt="Profile"
+            className="profile-picture"
+          />
+        </div>
         <h1>Manage Profile</h1>
       </div>
       {message && <p>{message}</p>}
@@ -140,7 +147,7 @@ const ProfilePage = () => {
       </div>
       <div className="profile-details">
         <div className="detail">
-        <label>current Password:</label>
+          <label>Current Password:</label>
           <input
             type="password"
             value={CurrentPassword}
@@ -164,7 +171,7 @@ const ProfilePage = () => {
           <label>Profile Picture:</label>
           <input
             type="file"
-            onChange={(e) => setProfilePicture(e.target.files[0])}
+            onChange={handleFileChange}
           />
         </div>
       </div>

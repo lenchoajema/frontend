@@ -23,7 +23,7 @@ const SellerDashboard = () => {
         productData.pictures.forEach((file) => formData.append("pictures", file));
       }
 
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
       if (productData._id) {
@@ -46,8 +46,9 @@ const SellerDashboard = () => {
   // Delete a product
   const handleDeleteProduct = async (id) => {
     try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       await api.delete(`/products/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       fetchProducts();
     } catch (error) {

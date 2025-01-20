@@ -13,7 +13,7 @@ const useSellerProducts = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await api.get("/products/seller/product", {
         params: { page },
         headers: { Authorization: `Bearer ${token}` },
@@ -65,7 +65,7 @@ const useSellerProducts = () => {
 
   const deleteProduct = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       await api.delete(`/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });

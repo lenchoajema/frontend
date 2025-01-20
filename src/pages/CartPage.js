@@ -15,7 +15,7 @@ const CartPage = () => {
       setLoading(true);
       setError(""); // Reset any previous error
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         if (!token) {
           throw new Error("User is not authenticated. Please log in.");
         }
@@ -86,7 +86,7 @@ const CartPage = () => {
   }; */
   const updateQuantity = async (productId, quantity) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   
       if (!token) {
         alert("User is not authenticated. Please log in.");
@@ -121,8 +121,10 @@ const CartPage = () => {
   
   const removeItem = async (productId) => {
     try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  
       await axios.delete(`/api/user/cart/${productId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setCart((prevCart) => {

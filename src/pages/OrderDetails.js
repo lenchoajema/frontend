@@ -16,7 +16,7 @@ const OrderDetails = () => {
       setError(null);
 
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         const response = await axios.get(`/api/orders/${orderId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });

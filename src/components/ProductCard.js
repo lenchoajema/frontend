@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "react-bootstrap";
-import { addToCart } from "../redux/cartSlice";
-import { useDispatch } from "react-redux";
+//import { addToCart } from "../redux/cartSlice";
+//import { useDispatch } from "react-redux";
 import axios from "axios";
 import "./ProductCard.css";
 //import cartItem from "./CartItem";
@@ -9,7 +9,7 @@ import "./ProductCard.css";
 const ProductCard = ({ product }) => {
   axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
   const serverBaseUrl = "http://localhost:5000"; // Base URL of your backend
-  const dispatch = useDispatch();
+  //const dispatch = useDispatch();
   const handleAddToCart = async () => {
     try {
       const response = await addToCart(product._id, 1); // Add 1 quantity
@@ -27,13 +27,20 @@ const ProductCard = ({ product }) => {
   //
   const addToCart = async (productId, quantity) => {
     try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("User is not authenticated");
+      }
+      console.log("token1", token);
       const response = await axios.post("/api/user/cart", {
         productId,
         quantity,
       }, {
-        headers: {Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });// Add token in the Authorization header);
+        headers: { Authorization: `Bearer ${token}` }
+      });// Add token in the Authorization header);
       console.log("Item added to cart:", response.data);
+      
       return response.data.cart; // Return updated cart if needed
     } catch (error) {
       console.error("Error adding item to cart:", error.response?.data?.message || error.message);
@@ -58,7 +65,7 @@ const ProductCard = ({ product }) => {
                               // Extract the last folder, which is 'upload'
                               const relativePath = picture.includes("upload") ? picture.split("upload").pop() : picture;
                               if (index === 0) {
-                                console.log("relativePath", relativePath);
+                               // console.log("relativePath", relativePath);
                                 return (
                                 <img
                                   key={index}

@@ -18,7 +18,7 @@ const OrderHistory = () => {
       setError(null);
 
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         const response = await axios.get(`/api/orders?page=${page}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
