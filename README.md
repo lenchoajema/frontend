@@ -66,3 +66,21 @@ Contributions are welcome! Please open an issue or submit a pull request.
 ## License
 
 This project is licensed under the MIT License.
+
+## Features
+
+- User authentication and authorization
+- Product management (CRUD operations)
+- Order processing and management
+- File uploads for product images
+- Secure password hashing
+- JWT-based authentication
+- API documentation with Swagger
+- Error handling and validation
+- Pagination for product listings
+- Search functionality for products
+- User profile management
+- Role-based access control
+- Email notifications for order status updates
+- Integration with payment gateways
+- Logging and monitoring
