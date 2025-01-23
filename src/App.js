@@ -14,6 +14,8 @@ import Register from "./pages/Register";
 import ProfilePage from "./components/ProfilePage";
 import OrderHistory from "./pages/OrderHistory";
 import OrderDetails from "./pages/OrderDetails";
+import ResetPassword from "./pages/ResetPassword";
+
 
 console.log("Home:", Home);
 console.log("ProductDetails:", ProductDetails);
@@ -34,6 +36,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/orders" element={<OrderHistory />} />
         <Route path="/orders/:orderId" element={<OrderDetails />} />
+        <Route path="/resetPassword" element={<ResetPassword />} />
       </Routes>
       <Footer />
     </>

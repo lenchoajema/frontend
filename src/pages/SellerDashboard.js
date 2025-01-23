@@ -10,8 +10,8 @@ const SellerDashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // Add or update product
-  const handleSaveProduct = async (productData) => {
+  // Add product
+  const handleAddProduct = async (productData) => {
     try {
       const formData = new FormData();
       formData.append("name", productData.name);
@@ -26,20 +26,42 @@ const SellerDashboard = () => {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      if (productData._id) {
-        // Update product
-        await api.put(`/products/seller/${productData._id}`, formData, { headers });
-      } else {
-        // Create product
-        await api.post("/products", formData, { headers });
+      await api.post("/products", formData, { headers });
+      alert("Product added successfully!");
+
+      // Refresh product list
+      fetchProducts();
+    } catch (error) {
+      console.error("Failed to add product:", error);
+    }
+  };
+
+  // Update product
+  const handleUpdateProduct = async (productData) => {
+    try {
+      console.log("productData", productData);
+      const formData = new FormData();
+      formData.append("name", productData.name);
+      formData.append("price", productData.price);
+      formData.append("description", productData.description);
+      formData.append("stock", productData.stock);
+      productData._id=editingProduct._id;
+      if (productData.pictures && Array.isArray(productData.pictures)) {
+        productData.pictures.forEach((file) => formData.append("pictures", file));
       }
+
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      await api.put(`/products/seller/${productData._id}`, formData, { headers });
+      alert("Product updated successfully!");
 
       // Refresh product list and reset editing state
       fetchProducts();
       setIsEditing(false);
       setEditingProduct(null);
     } catch (error) {
-      console.error("Failed to save product:", error);
+      console.error("Failed to update product:", error);
     }
   };
 
@@ -60,7 +82,7 @@ const SellerDashboard = () => {
     <div className="seller-dashboard">
       <h1>Seller Dashboard</h1>
       <ProductForm
-        onSubmit={handleSaveProduct}
+        onSubmit={isEditing ? handleUpdateProduct : handleAddProduct}
         editingProduct={editingProduct}
         isEditing={isEditing}
         cancelEdit={() => {

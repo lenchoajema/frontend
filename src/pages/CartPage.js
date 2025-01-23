@@ -51,39 +51,6 @@ const CartPage = () => {
       navigate("/checkout", { state: { items: cart.items, total: cart.total } });
     };
   
-  
-
-    /* const updateQuantity = async (productId, quantity) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("User is not authenticated. Please log in.");
-        return;
-      }
-  
-      // Send PUT request to update cart
-      const response = await axios.put(
-        `/api/user/cart/${productId}`,
-        { quantity },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-  
-      console.log("Response from backend:", response.data);
-  
-      // Update cart from the backend response
-      const updatedCart = response.data.cart;
-      if (!updatedCart) {
-        throw new Error("No cart data returned from backend.");
-      }
-  
-      setCart(updatedCart);
-    } catch (err) {
-      console.error("Error updating quantity:", err);
-      const errorMessage =
-        err.response?.data?.message || "Failed to update item quantity.";
-      alert(errorMessage);
-    }
-  }; */
   const updateQuantity = async (productId, quantity) => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -141,7 +108,7 @@ const CartPage = () => {
   };
   const placeOrder = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await axios.post(
         "/api/orders",
         {},
@@ -150,6 +117,7 @@ const CartPage = () => {
       alert("Order placed successfully!");
       setCart({ items: [], total: 0 });
       console.log("Order placed:", response.data);
+      
     } catch (error) {
       alert("Error placing order. Please try again.");
     }

@@ -18,6 +18,7 @@ const useSellerProducts = () => {
         params: { page },
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log("response",response);
       setProducts(response.data.products);
       setTotalPages(response.data.totalPages);
       setError("");

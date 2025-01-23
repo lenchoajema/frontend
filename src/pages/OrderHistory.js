@@ -35,6 +35,10 @@ const OrderHistory = () => {
     fetchOrders();
   }, [page]);
 
+  const handlecheckout = () => {
+    navigate("/checkout");
+  };
+
   const handleRetry = () => {
     setPage(1); // Reset to the first page
     setError(null);
@@ -81,6 +85,12 @@ const OrderHistory = () => {
                   style={styles.detailsButton}
                 >
                   View Details
+                </button>
+                <button onClick={handlecheckout
+
+
+                } style={styles.checkoutButton}>
+                  Checkout
                 </button>
               </li>
             ))}

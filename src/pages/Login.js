@@ -25,6 +25,9 @@ const Login = () => {
       else if (role === "customer") navigate("/");
     }
   }, [navigate]);
+  const handlereset = () => {
+    navigate("/resetPassword");
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -116,9 +119,12 @@ const Login = () => {
           </button>
         </form>
         <div className="login-footer">
-          <a href="/" className="forgot-password">
+        {/* <button onClick={handlereset} style={styles.backButton}>
+        Forgot Password?
+        </button> */}
+          <a href="/resetPassword" onClick={handlereset} className="forgot-password">
             Forgot Password?
-          </a>
+          </a> 
           <a href="/register" className="create-account">
             Create an account
           </a>

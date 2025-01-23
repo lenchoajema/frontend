@@ -5,6 +5,14 @@ import "./SellerProductList.css";
 const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, totalPages, setPage }) => {
   axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
+  const handlePrevious = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const handleNext = () => {
+    if (page < totalPages) setPage(page + 1);
+  };
+
   return (
     <div className="seller-product-list">
       <h2>Your Products</h2>
@@ -43,7 +51,9 @@ const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, t
                   ) : (
                     <p>No image available</p>
                   )}
-                  <h3>{product.name}</h3>
+                  <h3>Product: {product.name}</h3>
+                  <h3>In stock: {product.stock}</h3>
+                  <h3>Price: ${product.price}</h3>
                   <button onClick={() => onEdit(product)} className="edit-button">
                     Edit
                   </button>
@@ -57,11 +67,11 @@ const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, t
         </div>
       )}
       <div className="pagination">
-        <button disabled={page === 1} onClick={() => setPage(page - 1)} className="pagination-button">
+        <button disabled={page <= 1} onClick={handlePrevious} className="pagination-button">
           Previous
         </button>
         <span>{page} / {totalPages}</span>
-        <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="pagination-button">
+        <button disabled={page >= totalPages} onClick={handleNext} className="pagination-button">
           Next
         </button>
       </div>
@@ -70,8 +80,6 @@ const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, t
 };
 
 export default SellerProductList;
-
-
 
 
 /* import React from "react";

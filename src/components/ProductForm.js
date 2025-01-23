@@ -117,6 +117,15 @@ const ProductForm = ({ onSubmit, editingProduct, isEditing, cancelEdit }) => {
         accept="image/*"
         style={fileInputStyle}
       />
+      {isEditing && (
+        <input
+          type="text"
+          name="_id"
+          value={editingProduct._id}
+          readOnly
+          style={{ ...inputStyle, backgroundColor: '#e9ecef' }}
+        />
+      )}
       <button type="submit" style={buttonStyle}>{isEditing ? "Update Product" : "Add Product"}</button>
       {isEditing && <button type="button" onClick={cancelEdit} style={buttonStyle}>Cancel</button>}
     </form>
