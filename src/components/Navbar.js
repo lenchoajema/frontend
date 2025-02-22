@@ -8,7 +8,7 @@ const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+ // const [menuOpen, setMenuOpen] = useState(false);
   console.log("user Data",user);
   useEffect(() => {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -24,7 +24,7 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
+ // const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   return (
     <nav className="navbar">
