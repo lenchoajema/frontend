@@ -7,7 +7,7 @@ import ShippingForm from "../components/ShippingForm";
 import PaymentForm from "../components/PaymentForm";
 import PayPalButton from "../components/PayPalButton"; // New PayPal button component
 import api from "../services/api";
-import "./Checkout.css";
+//import "./Checkout.css";
 
 const Checkout = () => {
   const dispatch = useDispatch();
