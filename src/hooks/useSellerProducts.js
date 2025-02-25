@@ -28,7 +28,7 @@ const useSellerProducts = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   // Fetch products automatically on mount
   useEffect(() => {

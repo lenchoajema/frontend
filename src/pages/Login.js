@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { login } from "../redux/authSlice";
 import api from "../services/api";
 import "./styles.css";
-import Navbar from "../components/Navbar";
+//import Navbar from "../components/Navbar";
 
 const Login = () => {
   const [email, setEmail] = useState("");

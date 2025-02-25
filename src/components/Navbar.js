@@ -81,17 +81,17 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            <NavLink to="/login" className="navbar-link" activeClassName="active">
+            <NavLink to="/login" id="new_public" className="navbar-link" activeClassName="active">
               Login
             </NavLink>
-            <NavLink to="/register" className="navbar-link" activeClassName="active">
+            <NavLink to="/register" id="new_public" className="navbar-link" activeClassName="active">
               Register
-            </NavLink>
+            </NavLink> 
           </>
         )}
       </div>
 
-      {/* Mobile Menu }
+      {/* Mobile Menu*/ }
       <button className="menu-toggle" onClick={toggleMenu}>
         ☰
       </button>
@@ -138,76 +138,11 @@ const Navbar = () => {
             </>
           )}
         </div>
-      )} */}
+      )} 
+      
+
     </nav>
   );
 };
 
 export default Navbar;
-
-
-/* import React from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
-import { logout } from "../redux/authSlice";
-import "./Navbar.css"; // Assuming you style the Navbar here
-
-const Navbar = () => {
-  //const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-  const { user } = useSelector((state) => state.auth); // Access user state from Redux
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  //sessionStorage.removeItem("token"); // Remove token from sessionStorage
-  //localStorage.removeItem("token"); // Remove token from localStorage
-   
-
-  const handleLogout = () => {
-    dispatch(logout()); // Clear Redux state
-    localStorage.removeItem("token"); // Remove token from localStorage
-    sessionStorage.removeItem("token"); // Remove token from sessionStorage
-    navigate("/login"); // Redirect to login
-  };
-
-  return (
-    <nav className="navbar1">
-      <div className="navbar1-left">
-        <Link to="/" className="navbar1-link">Home</Link>
-
-        {user?.role === "admin" && (
-          <Link to="/admin" className="navbar1-link">Admin Dashboard</Link>
-        )}
-        {user?.role === "seller" && (
-          <Link to="/seller" className="navbar1-link">Seller Dashboard</Link>
-        )}
-        {user && (
-          <>
-            <Link to="/cart" className="navbar1-link">Cart</Link>
-            <Link to="/orders" className="navbar1-link">Orders</Link>
-            <Link to="/profile" className="navbar1-link">Profile</Link>
-          </>
-        )}
-      </div>
-
-      <div className="navbar1-right">
-        {user ? (
-          <>
-            <span className="welcome-message">
-              Welcome, {user.username || user.role || "User"}!
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="navbar1-link">Login</Link>
-            <Link to="/register" className="navbar1-link">Register</Link>
-          </>
-        )}
-      </div>
-    </nav>
-  );
-};
-
-export default Navbar;
- */
