@@ -11,10 +11,24 @@ const userRoutes = require("./routes/userRoutes");
 //const sellerProductRoutes = require('./routes/seller/productRoute');
 const productRoutes = require("./routes/productRoutes");
 const path = require('path');
-const redisClient = require("./utils/redisClient");
+const redis = require('redis');
+//const redisClient = require("./utils/redisClient");
 const ordersRoutes = require('./routes/ordersRoutes');
 
+dotenv.config();
+
+const redisClient = redis.createClient({
+  url: 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
 if (!redisClient.isOpen) {
+(async () => {
+  await redisClient.connect();
+  console.log("Redis client connected successfully");
+})();
+}
+/* if (!redisClient.isOpen) {
   (async () => {
     try {
       await redisClient.connect();
@@ -24,9 +38,9 @@ if (!redisClient.isOpen) {
     }
   })();
 }
+ */
 
 
-dotenv.config();
 
 const app = express();
 
