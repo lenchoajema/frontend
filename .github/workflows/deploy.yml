@@ -30,7 +30,7 @@ jobs:
         run: npm run build
         env:
           # Connect to backend API
-          REACT_APP_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-5000.github.dev'
+          REACT_APP_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-5000.app.github.dev'
           # If using Vite instead, use:
           # VITE_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-5000.github.dev'
       
