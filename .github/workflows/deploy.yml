@@ -30,20 +30,20 @@ jobs:
         run: npm run build
         env:
           # Connect to backend API
-          REACT_APP_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-3000.github.dev'
+          REACT_APP_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-5000.github.dev'
           # If using Vite instead, use:
-          # VITE_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-3000.github.dev'
+          # VITE_API_URL: 'https://${{ secrets.CODESPACE_NAME }}-5000.github.dev'
       
       - name: Configure environment variables
         run: |
-          echo "BACKEND_URL=https://${{ secrets.CODESPACE_NAME }}-3000.app.github.dev" >> .env
+          echo "BACKEND_URL=https://${{ secrets.CODESPACE_NAME }}-5000.app.github.dev" >> .env
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
           echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
       
       # Testing connection (remove in production)
       - name: Test backend connection
         run: |
-          curl -I "https://${{ secrets.CODESPACE_NAME }}-3000.app.github.dev/health" || echo "Backend may not be available"
+          curl -I "https://${{ secrets.CODESPACE_NAME }}-5000.app.github.dev/health" || echo "Backend may not be available"
       
       # Choose ONE of the deployment methods below:
       
