@@ -1,0 +1,13 @@
+Priority	Task	Details of Services, APIs, and Implementation	Proposed Schedule
+5	Automated Testing Framework	Implement unit, integration, and end-to-end tests using frameworks like Jest and Cypress. Include load testing with tools like Locust or JMeter.	Week 2
+17	Navbar & Footer	Develop a mobile-responsive navbar and footer with links that change based on user roles (admin, seller, customer). Conduct an accessibility audit for WCAG 2.1 compliance.	Week 8
+18	Dynamic Sidebars	Create role-specific sidebars for admin, seller, and customer dashboards. Include in-app notifications for updates.	Week 8
+19	SEO Audit	Implement on-page SEO optimizations, including product schema markup, user-friendly URLs, and sitemaps.	Week 8
+23	Analytics Dashboard for Sellers	Build a dashboard to display sales trends, product performance, and customer insights. Add functionality to export reports to CSV/PDF.	Week 10
+29	CMS for Blogs/Banners	Develop a user interface for content management with a rich-text editor. Include fields for SEO-friendly metadata.	Week 13
+30	Loyalty Rewards System	Create UI components for users to earn and view points from purchases and referrals. Display tiered rewards (e.g., silver/gold/platinum).	Week 14
+32	Interactive Map	Integrate Google Maps to display nearby sellers. Implement geofencing for location-based promotions.	Week 15
+33	Referral Program	Build a UI for users to invite friends and track referrals via unique codes.	Week 16
+34	A/B Testing Framework	Integrate with A/B testing tools like Optimizely or VWO to test UI/UX variations, particularly in the checkout flow.	Week 17
+38	Gamification Elements	Implement UI elements for gamification, such as badges, points, achievements, and leaderboards.	Week 21
+42	Social Login & Sharing	Implement UI components for social login (Google/Facebook) and sharing products on social media.	Week 25
