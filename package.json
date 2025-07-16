@@ -18,6 +18,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:both": "concurrently \"npm run start:backend\" \"npm start\"",
+    "start:backend": "cd backend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm start\"",
+    "dev:backend": "cd backend && npm run dev",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -41,10 +45,10 @@
     ]
   },
   "devDependencies": {
-  "@babel/core": "^7.26.0",
-  "@babel/preset-env": "^7.26.0",
-  "@babel/preset-react": "^7.26.3",
-  "@babel/plugin-proposal-private-property-in-object": "^7.18.6"
-  
-}
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-proposal-private-property-in-object": "^7.18.6",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "concurrently": "^9.2.0"
+  }
 }

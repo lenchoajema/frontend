@@ -3,7 +3,7 @@ import axios from "axios";
 import "./SellerProductList.css";
 
 const SellerProductList = ({ products, loading, error, onEdit, onDelete, page, totalPages, setPage }) => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev";
 
   const handlePrevious = () => {
     if (page > 1) setPage(page - 1);
@@ -180,7 +180,7 @@ const SellerProductList = () => {
       console.error('Error deleting product:', error);
     }
   };
-  const serverBaseUrl = "http://localhost:5000"; // Base URL of your backend
+  const serverBaseUrl = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev"; // Base URL of your backend
 
   return (
     <div className="seller-product-list">

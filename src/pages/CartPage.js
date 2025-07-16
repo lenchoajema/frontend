@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 
 const CartPage = () => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev";
     const [cart, setCart] = useState({ items: [], total: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
