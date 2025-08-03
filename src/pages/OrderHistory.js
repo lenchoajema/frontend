@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const OrderHistory = () => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev";
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

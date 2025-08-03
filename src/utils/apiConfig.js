@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://glowing-space-guacamole-965rww6px45hvjr-5000.app.github.dev/";//"http://localhost:5000/api"; // Adjust if your backend URL differs
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev/api";
 
 export const endpoints = {
   login: `${API_BASE_URL}/auth/login`,

@@ -8,7 +8,7 @@ const OrderDetails = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev";
 
   useEffect(() => {
     const fetchOrderDetails = async () => {

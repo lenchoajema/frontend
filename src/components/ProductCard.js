@@ -7,8 +7,8 @@ import "./ProductCard.css";
 //import cartItem from "./CartItem";
 
 const ProductCard = ({ product }) => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-  const serverBaseUrl = "http://localhost:5000"; // Base URL of your backend
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || 'https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev';
+  const serverBaseUrl = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev"; // Base URL of your backend
   //const dispatch = useDispatch();
   const handleAddToCart = async () => {
     try {
