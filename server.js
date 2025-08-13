@@ -14,6 +14,8 @@ const path = require('path');
 const redis = require('redis');
 //const redisClient = require("./utils/redisClient");
 const ordersRoutes = require('./routes/ordersRoutes');
+const stripeRoutes = require('./routes/stripeRoutes');
+const { apiLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
 
@@ -83,8 +85,29 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
 // Handle preflight requests
 app.options('*', cors(corsOptions));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Backend server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API Health check
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'API is working',
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.use("/api/products", productRoutes); //Routes for home page
 // Routes
@@ -100,6 +123,7 @@ app.use("/api/user", userRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/user/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/stripe', stripeRoutes);
 app.use((req, res) => {
   console.log(`Unhandled request: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ message: "Route not found" });

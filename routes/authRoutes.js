@@ -2,10 +2,11 @@
 const { register, login } = require('../controllers/authController');
 const router = express.Router();
 const { authenticateUser } = require("../middleware/authMiddleware"); // Your authentication middleware
+const { authLimiter } = require('../middleware/rateLimiter');
 
 
-router.post('/register', register); // Registration route
-router.post('/login', login);       // Login route
+router.post('/register', authLimiter, register); // Registration route
+router.post('/login', authLimiter, login);       // Login route
 
 
 // GET /auth/me - Return current logged-in user details
