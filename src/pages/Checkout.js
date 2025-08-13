@@ -9,13 +9,15 @@ import PayPalButton from "../components/PayPalButton"; // New PayPal button comp
 import api from "../services/api";
 //import "./Checkout.css";
 
+import StripeCheckout from "../components/StripeCheckout";
+
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const { items, total } = location.state || {}; // Extract items and total passed from CartPage
   const [shippingDetails, setShippingDetails] = useState(null);
-  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('paypal'); // 'paypal' or 'stripe'
  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,22 +55,31 @@ const Checkout = () => {
   if (!items || items.length === 0) {
     return <p>Your cart is empty. Please add items to proceed.</p>;
   }
-  console.log("paymentDetails",paymentDetails);
-  console.log("isSubmitting",isSubmitting);
- // console.log("response",response);
-
 
   return (
     <div className="checkout-page">
       <h1>Checkout</h1>
       <OrderSummary items={items} total={total} />
       <ShippingForm onDetailsSubmit={handleShippingSubmit} />
-      <PaymentForm onDetailsSubmit={setPaymentDetails} />
-      <PayPalButton 
-      total={total ? total.toFixed(2) : "0.00"}
-        onSuccess={handlePaymentSuccess}
-        disabled={!shippingDetails}
-      />
+      
+      <div>
+        <h3>Select Payment Method</h3>
+        <button onClick={() => setPaymentMethod('paypal')}>PayPal</button>
+        <button onClick={() => setPaymentMethod('stripe')}>Credit Card (Stripe)</button>
+      </div>
+
+      {paymentMethod === 'paypal' && (
+        <PayPalButton 
+          total={total ? total.toFixed(2) : "0.00"}
+          onSuccess={handlePaymentSuccess}
+          disabled={!shippingDetails}
+        />
+      )}
+
+      {paymentMethod === 'stripe' && shippingDetails && (
+        <StripeCheckout total={total} />
+      )}
+
        <button onClick={handleBack} style={styles.backButton}>
         Back to Order History
       </button>

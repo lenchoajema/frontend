@@ -17,7 +17,7 @@ CI/CD Pipeline Setup
 Set up automated pipelines (e.g., GitHub Actions/Jenkins) with linting, unit, and integration tests.
 Week 1-2
 Ensures code quality and controlled deployments.
-In Progress
+🔧 PRIORITY: Complete pipeline implementation
 Addition: Include security scanning tools (e.g., SonarQube) in the pipeline.
 3
 Security Audits & Penetration Testing (NEW)
@@ -80,7 +80,7 @@ Payment Gateway Integration
 Integrate Stripe and PayPal securely.
 Week 5
 Critical for transactions.
-Partially Completed
+🔧 PRIORITY: Complete Stripe integration
 Addition: PCI-DSS compliance checks for card data handling.
 12
 API Gateway Setup (NEW)

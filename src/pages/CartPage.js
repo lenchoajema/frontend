@@ -46,7 +46,7 @@ const CartPage = () => {
     // Automatically fetch cart on component mount
     useEffect(() => {
       fetchCart();
-    }, []);
+    }, [fetchCart]);
     const handlecheckout = () => {
       navigate("/checkout", { state: { items: cart.items, total: cart.total } });
     };
