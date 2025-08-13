@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -11,7 +11,7 @@ const CartPage = () => {
      const navigate = useNavigate();
   
     // Fetch cart from backend
-    const fetchCart = async () => {
+    const fetchCart = useCallback(async () => {
       setLoading(true);
       setError(""); // Reset any previous error
       try {
@@ -41,7 +41,7 @@ const CartPage = () => {
 
       if (loading) return <p>Loading...</p>;
       if (error) return <p style={{ color: "red" }}>{error}</p>;
-    };
+    }, [loading, error]);
   
     // Automatically fetch cart on component mount
     useEffect(() => {
