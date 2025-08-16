@@ -28,6 +28,20 @@ services:
     networks:
       - ecommerce_network
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecommerce_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://admin:password123@ecommerce_mongodb:27017/ecommerce?authSource=admin
+      - REDIS_URI=redis://ecommerce_redis:6379
+    networks:
+      - ecommerce_network
+
 volumes:
   mongodb_data:
   redis_data:
