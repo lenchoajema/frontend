@@ -8,10 +8,11 @@ const BASE_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 const API_BASE = `${BASE_URL}/api`;
 
 // Test data
+// Backend expects name, email, password. Using username only caused failures.
 const testUser = {
-  username: `testuser_${Date.now()}`,
+  name: `testuser_${Date.now()}`,
   email: `test_${Date.now()}@example.com`,
-  password: 'password123'
+  password: 'Password123!'
 };
 
 let authToken = '';
@@ -61,7 +62,7 @@ async function testUserRegistration() {
     const response = await axios.post(`${API_BASE}/auth/register`, testUser);
     log('User registration successful', { 
       userId: response.data.user?.id,
-      username: response.data.user?.username 
+      name: response.data.user?.name 
     });
     return true;
   } catch (error) {
@@ -81,7 +82,7 @@ async function testUserLogin() {
     authToken = response.data.token;
     log('User login successful', { 
       token: authToken ? 'Token received' : 'No token',
-      user: response.data.user?.username 
+      user: response.data.user?.name || response.data.user?.username 
     });
     return true;
   } catch (error) {
@@ -94,18 +95,14 @@ async function testGetProducts() {
   try {
     console.log('\n🛍️ Testing product retrieval...');
     const response = await axios.get(`${API_BASE}/products`);
-    
-    if (response.data.products && response.data.products.length > 0) {
-      testProductId = response.data.products[0]._id;
-      log('Products retrieved successfully', { 
-        count: response.data.products.length,
-        firstProductId: testProductId 
-      });
+    const list = Array.isArray(response.data) ? response.data : response.data.products || [];
+    if (list.length > 0) {
+      testProductId = list[0]._id;
+      log('Products retrieved successfully', { count: list.length, firstProductId: testProductId });
       return true;
-    } else {
-      console.log('⚠️ No products found - this might be expected for a new setup');
-      return false;
     }
+    console.log('⚠️ No products found - this might be expected for a new setup');
+    return false;
   } catch (error) {
     logError('Product retrieval failed', error);
     return false;

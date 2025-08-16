@@ -19,11 +19,19 @@
     "web-vitals": "^4.2.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "start:both": "concurrently \"npm run start:backend\" \"npm start\"",
-    "start:backend": "cd backend && npm start",
-    "dev": "concurrently \"npm run dev:backend\" \"npm start\"",
-    "dev:backend": "cd backend && npm run dev",
+  "start": "react-scripts start",
+  "start:backend": "cd backend && node server.js",
+  "start:frontend": "react-scripts start",
+  "start:both": "concurrently -n BACKEND,FRONTEND -c green,cyan \"npm run start:backend\" \"npm run start:frontend\"",
+  "dev:backend": "cd backend && nodemon server.js",
+  "dev:frontend": "react-scripts start",
+  "dev:all": "concurrently -n BACKEND,FRONTEND -c green,cyan \"npm run dev:backend\" \"npm run dev:frontend\"",
+  "seed:db": "node backend/scripts/seed.js",
+  "seed:products": "node backend/scripts/seedProducts.js",
+  "wait:backend": "node -e \"const http=require('http');let a=Date.now();const retry=()=>{http.get('http://localhost:5000/health',r=>{if(r.statusCode===200){console.log('Backend ready in '+(Date.now()-a)+'ms');process.exit(0);}else setTimeout(retry,500);}).on('error',()=>setTimeout(retry,500));};retry();\"",
+  "run:all": "concurrently -n BACKEND,FRONTEND -c green,cyan \"npm run start:backend\" \"npm run start:frontend\"",
+  "run:all:seed": "npm run seed:db && npm run run:all",
+  "run:all:wait": "concurrently -n BACKEND,FRONTEND -c green,cyan \"npm run start:backend\" \"npm run start:frontend\" & npm run wait:backend",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:coverage": "react-scripts test --coverage --watchAll=false",
@@ -45,5 +53,17 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "jest-sonar-reporter": "^2.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

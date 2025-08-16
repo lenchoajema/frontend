@@ -40,11 +40,14 @@ const takeScreenshot = async (name) => {
 async function setupBrowser() {
   try {
     console.log('\n🚀 Setting up browser...');
+    const headlessEnv = process.env.HEADLESS;
+    const headless = headlessEnv ? headlessEnv !== 'false' && headlessEnv !== '0' : true; // default headless in CI
     browser = await puppeteer.launch({ 
-      headless: false, // Set to true for CI/CD
-      slowMo: 50,
+      headless: headless ? 'new' : false,
+      slowMo: headless ? 0 : 50,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+    console.log(`Puppeteer launched in ${headless ? 'headless' : 'headed'} mode`);
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 720 });
     
@@ -65,6 +68,7 @@ async function setupBrowser() {
 async function testFrontendConnection() {
   try {
     console.log('\n🌐 Testing frontend connection...');
+    if (!page) throw new Error('Browser not initialized');
     await page.goto(FRONTEND_URL, { waitUntil: 'networkidle2' });
     
     const title = await page.title();
@@ -80,6 +84,7 @@ async function testFrontendConnection() {
 async function testUserRegistration() {
   try {
     console.log('\n📝 Testing user registration flow...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Navigate to register page
     await page.goto(`${FRONTEND_URL}/register`, { waitUntil: 'networkidle2' });
@@ -130,6 +135,7 @@ async function testUserRegistration() {
 async function testUserLogin() {
   try {
     console.log('\n🔐 Testing user login flow...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Navigate to login page
     await page.goto(`${FRONTEND_URL}/login`, { waitUntil: 'networkidle2' });
@@ -173,6 +179,7 @@ async function testUserLogin() {
 async function testProductBrowsing() {
   try {
     console.log('\n🛍️ Testing product browsing...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Navigate to home page
     await page.goto(FRONTEND_URL, { waitUntil: 'networkidle2' });
@@ -199,6 +206,7 @@ async function testProductBrowsing() {
 async function testAddToCart() {
   try {
     console.log('\n🛒 Testing add to cart flow...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Look for add to cart button
     const addToCartBtn = await page.$('button[class*="cart"], button[class*="add"], .add-to-cart');
@@ -233,6 +241,7 @@ async function testAddToCart() {
 async function testCartPage() {
   try {
     console.log('\n👀 Testing cart page...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Navigate to cart page
     await page.goto(`${FRONTEND_URL}/cart`, { waitUntil: 'networkidle2' });
@@ -263,6 +272,7 @@ async function testCartPage() {
 async function testCheckoutFlow() {
   try {
     console.log('\n💳 Testing checkout flow...');
+    if (!page) throw new Error('Browser not initialized');
     
     // Navigate to checkout page
     await page.goto(`${FRONTEND_URL}/checkout`, { waitUntil: 'networkidle2' });
