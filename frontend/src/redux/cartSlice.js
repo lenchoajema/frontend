@@ -14,6 +14,7 @@ export const fetchCart = createAsyncThunk("user/cart/fetchCart", async (_, thunk
 // Add item to cart
 export const addToCart = createAsyncThunk("/user/cart/addToCart", async ({ productId, quantity }, thunkAPI) => {
   try {
+<<<<<<< HEAD:frontend/src/redux/cartSlice.js
     // Call backend route mounted at /api/user/cart (api.baseURL already includes /api)
     const response = await api.post('/user/cart', { productId, quantity });
 
@@ -22,6 +23,13 @@ export const addToCart = createAsyncThunk("/user/cart/addToCart", async ({ produ
 
     // Normalize backend cart items into the shape the reducers expect:
     // reducer expects items like { product: { _id, price, name, pictures }, quantity }
+=======
+    //console.log("before add to cart", productId, quantity);
+    const response = await api.post('/user/cart', { productId, quantity });
+
+    const cart = response.data?.cart || response.data;
+
+>>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28:src/redux/cartSlice.js
     const items = (cart.items || []).map((it) => ({
       product: {
         _id: it.productId || (it.product && it.product._id),

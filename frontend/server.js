@@ -12,6 +12,7 @@ const userRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const path = require('path');
 const redis = require('redis');
+const fs = require('fs');
 //const redisClient = require("./utils/redisClient");
 const ordersRoutes = require('./routes/ordersRoutes');
 const stripeRoutes = require('./routes/stripeRoutes');
@@ -62,8 +63,157 @@ if (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '') {
 
 const app = express();
 
+// Security / tracing configuration (declare early so middleware can use them)
+const REDACT_KEYS = (process.env.TRACE_REDACT_KEYS || 'password,token,authorization').split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+const STRICT_JSON = process.env.STRICT_JSON === '1' || process.env.STRICT_JSON === 'true';
+const ENABLE_TRACE = process.env.REQUEST_TRACE === '1' || process.env.REQUEST_TRACE === 'true' || !!process.env.REQUEST_TRACE;
+const TRACE_FILE = process.env.REQUEST_TRACE_FILE || '/tmp/request-trace.log';
+
 // Middleware
-app.use(express.json());
+// Use a raw parser that always captures the body and never throws on malformed JSON.
+// This allows controllers to perform graceful fallback parsing when needed.
+app.use(express.raw({ type: '*/*', limit: '1mb' }));
+
+app.use((req, res, next) => {
+  try {
+    // raw buffer (may be empty)
+    const buf = req.body && Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+    req.rawBuf = buf;
+    req.rawBody = buf.toString('utf8');
+
+    const ctype = (req.headers['content-type'] || '').toLowerCase();
+    req.jsonParseFailed = false;
+    if (ctype.includes('application/json')) {
+      try {
+        req.body = req.rawBody ? JSON.parse(req.rawBody) : {};
+      } catch (e) {
+        // don't throw; mark parse failure and leave req.body empty for fallback parsing
+        req.jsonParseFailed = true;
+        req.body = {};
+      }
+    } else if (ctype.includes('application/x-www-form-urlencoded')) {
+      // simple urlencoded parse
+      const obj = {};
+      const pairs = req.rawBody.split('&').filter(Boolean);
+      for (const p of pairs) {
+        const idx = p.indexOf('=');
+        if (idx > -1) {
+          const k = decodeURIComponent(p.slice(0, idx));
+          const v = decodeURIComponent(p.slice(idx + 1));
+          obj[k] = v;
+        }
+      }
+      req.body = obj;
+    } else if (req.rawBody && req.rawBody.includes(':')) {
+      // attempt to parse simple key:value lines
+      const obj = {};
+      const lines = req.rawBody.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        const idx = line.indexOf(':');
+        if (idx > 0) {
+          const k = line.slice(0, idx).trim();
+          const v = line.slice(idx + 1).trim();
+          obj[k] = v;
+        }
+      }
+      // leave as fallback if controller needs specific keys
+      req.body = obj;
+    } else {
+      req.body = {};
+    }
+  } catch (err) {
+    req.rawBody = undefined;
+    req.rawBuf = undefined;
+    req.body = {};
+    req.jsonParseFailed = true;
+  }
+  // Enforce strict JSON bodies if configured: reject non-JSON request bodies for mutating methods
+  if (STRICT_JSON) {
+    const hasBodyMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((req.method || '').toUpperCase());
+    const ctype = (req.headers['content-type'] || '').toLowerCase();
+    if (hasBodyMethod) {
+      // If content type isn't JSON or parsing previously failed for JSON, reject
+      if (!ctype.includes('application/json') || req.jsonParseFailed) {
+        return res.status(400).json({ message: 'Server requires application/json request bodies' });
+      }
+    }
+  }
+  return next();
+});
+
+// redact helper (keeps previews safe)
+function redactRawBody(raw) {
+  if (!raw) return '';
+  // Try to mask common JSON keys
+  let out = raw;
+  try {
+    if (out.trim().startsWith('{') || out.trim().startsWith('[')) {
+      const parsed = JSON.parse(out);
+      const mask = (v) => (typeof v === 'string' && v.length > 0 ? '******' : v);
+      function walk(o) {
+        if (!o || typeof o !== 'object') return o;
+        for (const k of Object.keys(o)) {
+          if (REDACT_KEYS.includes(k.toLowerCase())) o[k] = mask(o[k]);
+          else o[k] = walk(o[k]);
+        }
+        return o;
+      }
+      return JSON.stringify(walk(parsed));
+    }
+    // fallback: redact key:value or comma-separated key:value patterns
+    const kv = out.split(/[,&\n]/).map(s => s.trim()).map(seg => {
+      const idx = seg.indexOf(':');
+      if (idx > 0) {
+        const k = seg.slice(0, idx).trim();
+        const v = seg.slice(idx + 1).trim();
+        if (REDACT_KEYS.includes(k.toLowerCase())) return `${k}:******`;
+      }
+      return seg;
+    });
+    return kv.join(',');
+  } catch (e) {
+    // on parse error, very defensively mask any token-like strings
+    return out.replace(/([A-Za-z0-9_\-]{8,})/g, (m) => (m.length > 6 ? '******' : m));
+  }
+}
+// --- Request trace middleware (enable with REQUEST_TRACE=1) ---
+if (ENABLE_TRACE) {
+  console.log(`[trace] Request tracing enabled. Writing to ${TRACE_FILE}`);
+  // Lightweight rotation if file grows too large (> ~1MB)
+  try {
+    if (fs.existsSync(TRACE_FILE) && fs.statSync(TRACE_FILE).size > 1024 * 1024) {
+      fs.renameSync(TRACE_FILE, TRACE_FILE + '.1');
+    }
+  } catch (_) {}
+  app.use((req, res, next) => {
+    const started = Date.now();
+    const { method, originalUrl, headers } = req;
+    const ip = req.ip || req.connection?.remoteAddress;
+    const remotePort = req.connection?.remotePort;
+    const localPort = req.connection?.localPort;
+  const rawPreview = redactRawBody((req.rawBody || '').slice(0, 200));
+    res.on('finish', () => {
+      const entry = {
+        ts: new Date().toISOString(),
+        durMs: Date.now() - started,
+        method,
+        url: originalUrl,
+        status: res.statusCode,
+        ip,
+        remotePort,
+        localPort,
+        ua: headers['user-agent'],
+        ct: headers['content-type'],
+        cl: headers['content-length'],
+        parseFailed: !!req.jsonParseFailed,
+        keys: Object.keys(req.body || {}),
+  rawPreview,
+      };
+      fs.appendFile(TRACE_FILE, JSON.stringify(entry) + '\n', () => {});
+    });
+    next();
+  });
+}
 
 // CORS configuration for GitHub Codespaces
 const corsOptions = {
@@ -127,6 +277,40 @@ app.use('/api/stripe', stripeRoutes);
 app.use((req, res) => {
   console.log(`Unhandled request: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ message: "Route not found" });
+});
+
+// JSON parse error handler (must come after routes/middleware)
+app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.parse.failed') {
+    // body-parser / express.json() parsing error
+    // Log requester identification to trace malformed payloads
+    const requester = {
+      ip: req.ip || req.connection?.remoteAddress || 'unknown',
+      remoteAddress: req.connection?.remoteAddress || 'unknown',
+  remotePort: req.connection?.remotePort || req.socket?.remotePort || 'unknown',
+  localPort: req.connection?.localPort || req.socket?.localPort || 'unknown',
+      userAgent: req.headers && req.headers['user-agent'] ? req.headers['user-agent'] : 'unknown',
+      contentType: req.headers && req.headers['content-type'] ? req.headers['content-type'] : 'unknown',
+      contentLength: req.headers && req.headers['content-length'] ? req.headers['content-length'] : 'unknown',
+    };
+    console.warn('JSON parse error for request:', req.method, req.originalUrl, requester);
+    if (req) {
+  if (req.rawBody) {
+        const preview = req.rawBody.length > 200 ? req.rawBody.slice(0, 200) + '...[truncated]' : req.rawBody;
+        console.warn('Raw body preview:', preview);
+      }
+      if (req.rawBuf) {
+        const hex = req.rawBuf.slice(0, 200).toString('hex');
+        console.warn('Raw body hex (first 200 bytes):', hex);
+      }
+      if (!req.rawBody && !req.rawBuf) {
+        console.warn('No rawBody/rawBuf captured');
+      }
+    }
+    return res.status(400).json({ message: 'Invalid JSON payload' });
+  }
+  // pass along other errors
+  return next(err);
 });
 
 // Database connection
