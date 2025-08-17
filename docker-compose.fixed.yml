@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: ecommerce_mongodb_fixed
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME:-admin}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD:-changeme}"
+      MONGO_INITDB_DATABASE: "${MONGO_INITDB_DATABASE:-ecommerce}"
+    volumes:
+      - mongodb_data_fixed:/data/db
+    networks:
+      - ecommerce_network_fixed
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: ecommerce_redis_fixed
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_fixed:/data
+    networks:
+      - ecommerce_network_fixed
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecommerce_backend_fixed
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      MONGO_URI: "${MONGO_URI:-mongodb://admin:changeme@ecommerce_mongodb_fixed:27017/ecommerce?authSource=admin}"
+      REDIS_URL: "${REDIS_URL:-redis://ecommerce_redis_fixed:6379}"
+      REQUEST_TRACE: "${REQUEST_TRACE:-1}"
+      STRICT_JSON: "${STRICT_JSON:-1}"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - ecommerce_network_fixed
+    volumes:
+      - ./backend:/app
+      - ./frontend:/app/frontend
+      - ./frontend/node_modules:/app/frontend/node_modules
+      - ./trace-backups:/tmp/trace-backups
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce_frontend_fixed
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - PORT=3000
+      - REACT_APP_BACKEND_URL=http://ecommerce_backend_fixed:5000
+    networks:
+      - ecommerce_network_fixed
+
+volumes:
+  mongodb_data_fixed:
+  redis_data_fixed:
+
+networks:
+  ecommerce_network_fixed:
+    driver: bridge
