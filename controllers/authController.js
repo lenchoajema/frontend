@@ -69,16 +69,57 @@ const login = async (req, res) => {
 // Login function
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // If express.json failed to parse, req.body may be empty but req.rawBody is available
+    let { email, password } = req.body || {};
+    if ((!email || !password) && req && req.rawBody) {
+      try {
+        const raw = req.rawBody.trim();
+        // If it's JSON-like, try JSON.parse
+        if (raw.startsWith('{') || raw.startsWith('[')) {
+          const parsed = JSON.parse(raw);
+          email = email || parsed.email;
+          password = password || parsed.password;
+        } else if (raw.includes('&') || raw.includes('=')) {
+          // urlencoded
+          const pairs = raw.split(/[&\n]/);
+          for (const p of pairs) {
+            const [k, v] = p.split('=');
+            if (k && v) {
+              if (!email && k.trim() === 'email') email = decodeURIComponent(v.trim());
+              if (!password && k.trim() === 'password') password = decodeURIComponent(v.trim());
+            }
+          }
+        } else if (raw.includes(':')) {
+          // simple key:value; support single-line comma-separated or newline-separated
+          let segments = raw.split(/\r?\n/).filter(Boolean);
+          if (segments.length === 1 && raw.includes(',')) {
+            segments = raw.split(',').map(s => s.trim()).filter(Boolean);
+          }
+          for (const seg of segments) {
+            const idx = seg.indexOf(':');
+            if (idx > 0) {
+              const k = seg.slice(0, idx).trim();
+              const v = seg.slice(idx + 1).trim();
+              if (!email && k === 'email') email = v;
+              if (!password && k === 'password') password = v;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore fallback parse errors
+      }
+    }
 
-    // Check if user exists
-    const user = await User.findOne({ email });
+  // Check if user exists
+  const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Validate password
-    const isMatch = await bcrypt.compare(password, user.password);
+  console.log('[AUTH] Login attempt', { email, providedPwdLength: password?.length, hashPrefix: user.password?.slice(0,4) });
+  const isMatch = await bcrypt.compare(password, user.password);
+  console.log('[AUTH] Password match result:', isMatch);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
