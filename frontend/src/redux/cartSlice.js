@@ -14,17 +14,30 @@ export const fetchCart = createAsyncThunk("user/cart/fetchCart", async (_, thunk
 // Add item to cart
 export const addToCart = createAsyncThunk("/user/cart/addToCart", async ({ productId, quantity }, thunkAPI) => {
   try {
-    //console.log("before add to cart", productId, quantity);
-    const response = await api.post('/api/cart', { productId, quantity }, {
-      headers: {Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });// Add token in the Authorization header
-    
-    
-    console.log("after add to cart", response);
-    //const response = await api.post("/cart", { productId, quantity });
-    return response.data;  // Ensure the response includes `items` and `totalPrice`
+    // Call backend route mounted at /api/user/cart (api.baseURL already includes /api)
+    const response = await api.post('/user/cart', { productId, quantity });
+
+    // Backend returns { message, cart } or just cart
+    const cart = response.data?.cart || response.data;
+
+    // Normalize backend cart items into the shape the reducers expect:
+    // reducer expects items like { product: { _id, price, name, pictures }, quantity }
+    const items = (cart.items || []).map((it) => ({
+      product: {
+        _id: it.productId || (it.product && it.product._id),
+        price: it.price || (it.product && it.product.price),
+        name: it.name || (it.product && it.product.name),
+        pictures: it.pictures || (it.product && it.product.pictures) || [],
+      },
+      quantity: it.quantity,
+    }));
+
+    return {
+      items,
+      totalPrice: cart.total ?? cart.totalPrice ?? 0,
+    };
   } catch (error) {
-    return thunkAPI.rejectWithValue(error.response.data);
+    return thunkAPI.rejectWithValue(error.response?.data || { message: error.message });
   }
 });
 

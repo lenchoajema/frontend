@@ -1,7 +1,9 @@
 const redis = require("redis");
 
+const redisUrl = process.env.REDIS_URI || "redis://127.0.0.1:6379";
+
 const redisClient = redis.createClient({
-  url: "redis://127.0.0.1:6379", // Update with your Redis server URL if necessary
+  url: redisUrl,
 });
 
 redisClient.connect().catch((err) => {

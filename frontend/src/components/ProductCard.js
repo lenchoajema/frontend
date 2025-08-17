@@ -1,99 +1,66 @@
 import React from "react";
 import { Button } from "react-bootstrap";
-//import { addToCart } from "../redux/cartSlice";
-//import { useDispatch } from "react-redux";
-import axios from "axios";
+import { useDispatch } from "react-redux";
+import { addToCart as addToCartThunk } from "../redux/cartSlice";
 import "./ProductCard.css";
-//import cartItem from "./CartItem";
 
 const ProductCard = ({ product }) => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || 'https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev';
-  const serverBaseUrl = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev"; // Base URL of your backend
-  //const dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const serverBaseUrl = process.env.REACT_APP_BACKEND_URL || 'https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev';
+
+  const [showViewCartButton, setShowViewCartButton] = React.useState(false);
+  const [message, setMessage] = React.useState(null);
+
   const handleAddToCart = async () => {
     try {
-      const response = await addToCart(product._id, 1); // Add 1 quantity
-      console.log("Cart updated:", response);
-      alert("Item added to cart!"); 
-      //const response = await dispatch(addToCart({  productId: product._id, quantity: 1 }));
-      if (response) {
-        console.log("Product added to cart:", { productId: product._id, quantity: 1 });
-        setShowViewCartButton(true);
+      // Dispatch addToCart thunk which calls backend and updates store
+      const action = await dispatch(addToCartThunk({ productId: product._id, quantity: 1 }));
+      if (action.error) {
+        throw new Error(action.error.message || 'Failed to add to cart');
       }
-    } catch (error) {
-      console.error("Failed to add product to cart:", error);
+      setMessage('Item added to cart');
+      setShowViewCartButton(true);
+      // auto-hide message after 2 seconds
+      setTimeout(() => setMessage(null), 2000);
+    } catch (err) {
+      console.error('Add to cart failed', err);
+      setMessage(err.message || 'Failed to add to cart');
+      setTimeout(() => setMessage(null), 3000);
     }
   };
-  //
-  const addToCart = async (productId, quantity) => {
-    try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("User is not authenticated");
-      }
-      console.log("token1", token);
-      const response = await axios.post("/api/user/cart", {
-        productId,
-        quantity,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });// Add token in the Authorization header);
-      console.log("Item added to cart:", response.data);
-      
-      return response.data.cart; // Return updated cart if needed
-    } catch (error) {
-      console.error("Error adding item to cart:", error.response?.data?.message || error.message);
-      throw new Error(error.response?.data?.message || "Failed to add item to cart");
-    }
-  };
-  
-  const [showViewCartButton, setShowViewCartButton] = React.useState(false);
 
-  const handleViewCart = () => {
-    // Logic to navigate to the cart page
-    console.log("Navigating to cart page");
-    // Navigate to the cart page
-    window.location.href = "/cart";
-  }
-  
+  const handleViewCart = () => { window.location.href = '/cart'; };
+
   return (
     <div className="product-card">
       <div className="product-images">
-                          {product.pictures && product.pictures.length > 0 ? (
-                            product.pictures.map((picture, index) => {
-                              // Extract the last folder, which is 'upload'
-                              const relativePath = picture.includes("upload") ? picture.split("upload").pop() : picture;
-                              if (index === 0) {
-                               // console.log("relativePath", relativePath);
-                                return (
-                                <img
-                                  key={index}
-                                  title={relativePath.split('/').pop()}
-                                  src={`${serverBaseUrl}/upload${relativePath}`} // Ensure the full URL is reconstructed
-                                  alt={`${product.name}-${index}`}
-                                  className="product-image"
-                                />
-                                );
-                                
-                                
+        {product.pictures && product.pictures.length > 0 ? (
+          product.pictures.slice(0,1).map((picture, index) => {
+            const relativePath = picture.includes('upload') ? picture.split('upload').pop() : picture;
+            return (
+              <img
+                key={index}
+                title={relativePath.split('/').pop()}
+                src={`${serverBaseUrl}/upload${relativePath}`}
+                alt={`${product.name}-${index}`}
+                className="product-image"
+              />
+            );
+          })
+        ) : (
+          <p>No images available</p>
+        )}
 
-
-                              }
-                              return null;
-                            })
-                          ) : (
-                            <p>No images available</p>
-                          )}
         <Button variant="primary" onClick={handleAddToCart}>
-                          Add to Cart
-                  </Button>
-         {showViewCartButton && (
-                    <Button variant="secondary" onClick={handleViewCart}>
-                      View Cart
-                    </Button>
-                  )}
-             </div>
+          Add to Cart
+        </Button>
+        {showViewCartButton && (
+          <Button variant="secondary" onClick={handleViewCart}>
+            View Cart
+          </Button>
+        )}
+        {message && <div className="cart-message">{message}</div>}
+      </div>
       <div className="product-info">
         <h3>{product.name}</h3>
         <p>${product.price}</p>
@@ -101,6 +68,5 @@ const ProductCard = ({ product }) => {
     </div>
   );
 };
-
 
 export default ProductCard;

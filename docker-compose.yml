@@ -8,9 +8,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: ecommerce
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME:-admin}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD:-changeme}"
+      MONGO_INITDB_DATABASE: "${MONGO_INITDB_DATABASE:-ecommerce}"
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -37,10 +37,19 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb://admin:password123@ecommerce_mongodb:27017/ecommerce?authSource=admin
-      - REDIS_URI=redis://ecommerce_redis:6379
+      MONGO_URI: "${MONGO_URI:-mongodb://admin:changeme@ecommerce_mongodb:27017/ecommerce?authSource=admin}"
+      REDIS_URI: "${REDIS_URI:-redis://ecommerce_redis:6379}"
+      REDIS_URL: "${REDIS_URL:-redis://ecommerce_redis:6379}"
+      REQUEST_TRACE: "${REQUEST_TRACE:-1}"
+      STRICT_JSON: "${STRICT_JSON:-1}"
+    depends_on:
+      - mongodb
+      - redis
     networks:
       - ecommerce_network
+    volumes:
+      - ./backend:/app
+      - ./trace-backups:/tmp/trace-backups
 
   frontend:
     build:
@@ -50,6 +59,9 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    environment:
+      - REDIS_URI=redis://ecommerce_redis:6379
+      - REDIS_URL=redis://ecommerce_redis:6379
     networks:
       - ecommerce_network
 

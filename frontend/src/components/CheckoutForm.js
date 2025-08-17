@@ -12,27 +12,37 @@ const CheckoutForm = ({ total }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setProcessing(true);
+    if (!stripe || !elements) {
+      setError('Payment system is not ready. Please try again later.');
+      setProcessing(false);
+      return;
+    }
 
-    const { data: { clientSecret } } = await api.post('/stripe/create-payment-intent', {
-      amount: Math.round(total * 100), // Amount in cents
-    });
+    let clientSecret;
+    try {
+      const res = await api.post('/stripe/create-payment-intent', { amount: Math.round(total * 100) });
+      clientSecret = res.data?.clientSecret;
+      if (!clientSecret) throw new Error('No clientSecret returned');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to create payment intent');
+      setProcessing(false);
+      return;
+    }
 
     const payload = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: {
-        card: elements.getElement(CardElement),
-      },
+      payment_method: { card: elements.getElement(CardElement) },
     });
 
     if (payload.error) {
       setError(`Payment failed: ${payload.error.message}`);
       setProcessing(false);
-    } else {
-      setError(null);
-      setProcessing(false);
-      setSucceeded(true);
-      // Here you would typically place the order
-      alert('Payment successful!');
+      return;
     }
+
+    setError(null);
+    setProcessing(false);
+    setSucceeded(true);
+    alert('Payment successful!');
   };
 
   return (

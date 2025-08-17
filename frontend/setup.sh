@@ -15,7 +15,7 @@ if ! docker ps | grep -q ecommerce_mongodb; then
     docker run -d --name ecommerce_mongodb \
         -p 27017:27017 \
         -e MONGO_INITDB_ROOT_USERNAME=admin \
-        -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+    -e MONGO_INITDB_ROOT_PASSWORD="${MONGO_INITDB_ROOT_PASSWORD:-changeme}" \
         -e MONGO_INITDB_DATABASE=ecommerce \
         mongo:7.0
 fi
