@@ -1,5 +1,5 @@
-const User = require("../models/User");
-const Product = require("../models/productModel");
+const User = require("../../../backend/models/User");
+const Product = require("../../../backend/models/Product");
 const mongoose = require("mongoose");
 
 // List all users

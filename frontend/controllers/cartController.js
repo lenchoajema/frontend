@@ -1,5 +1,5 @@
 /*// ./controllers/cartController.js
-const Cart = require("../models/Cart"); // Assuming a Cart model exists
+const Cart = require("../../../backend/models/Cart"); // Centralized model
 
 // Add item to cart
 exports.addToCart = async (req, res) => {
@@ -70,8 +70,8 @@ exports.removeFromCart = async (req, res) => {
 */
 
 
-const Cart = require('../models/Cart');
-const Product = require('../models/productModel');
+const Cart = require('../../../backend/models/Cart');
+const Product = require('../../../backend/models/Product');
 
 // Fetch the user's cart
 const getCart = async (req, res) => {

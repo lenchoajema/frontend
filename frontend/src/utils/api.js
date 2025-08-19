@@ -1,33 +1,26 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev/api", // Backend API URL
-});
+// Normalized API utility: reuse the primary axios instance from services/api
+// to ensure a single consistent baseURL and interceptors.
+import api from '../services/api';
 
 export const setAuthToken = (token) => {
   if (token) {
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
   } else {
-    delete api.defaults.headers.common["Authorization"];
+    delete api.defaults.headers.common.Authorization;
   }
 };
- /* const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
+// Helper endpoints for PayPal/Stripe style order flows.
+// These assume backend routes mounted at /api/payments/* or /api/orders/*.
+// Adjust paths if backend implements different structure.
 export const createOrder = async (total) => {
-    const response = await fetch(`${API_BASE_URL}/api/create-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ total }),
-    });
-    return response.json();
+  const { data } = await api.post('/payments/create-order', { total });
+  return data; // expected { id, ... }
 };
 
 export const captureOrder = async (orderID) => {
-    const response = await fetch(`${API_BASE_URL}/api/capture-order/${orderID}`, {
-        method: 'POST',
-    });
-    return response.json();
+  const { data } = await api.post(`/payments/capture-order/${orderID}`);
+  return data;
 };
- */
- 
+
 export default api;

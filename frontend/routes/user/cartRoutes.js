@@ -18,7 +18,7 @@ module.exports = router;
 const express = require("express");
 const redisClient = require("../../utils/redisClient");
 const { authenticateUser } = require("../../middleware/authMiddleware");
-const Product = require("../../models/productModel"); // Import product model
+const Product = require("../../../../backend/models/Product"); // Centralized product model
 const router = express.Router();
 
 // Add item to cart with product validation

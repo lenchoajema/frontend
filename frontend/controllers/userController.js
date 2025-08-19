@@ -1,4 +1,4 @@
-const User = require("../models/User"); // Assuming a Mongoose User model is used
+const User = require("../../../backend/models/User"); // Updated path
 
 // @desc    Get the logged-in user's profile
 // @route   GET /api/user/profile

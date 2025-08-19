@@ -71,7 +71,7 @@ router.delete('/seller/:id', authenticateUser, authorizeRoles('seller'), (req, r
   const productId = req.params.id;
   deleteProduct(req, res, { seller: sellerId, _id: productId });
 });
-const Product = require('../models/productModel'); // Import your Product model
+const Product = require('../../../backend/models/Product'); // Centralized Product model
 
 // GET /api/products/search?query=your_search_term
 router.get('/search', async (req, res) => {

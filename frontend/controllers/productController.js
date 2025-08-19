@@ -1,4 +1,4 @@
-const Product = require('../models/productModel');
+const Product = require('../../../backend/models/Product');
 
 // Create a product
 const createProduct = async (req, res) => {
@@ -115,7 +115,7 @@ const getProductsBySeller = async (req, res) => {
     res.status(500).json({ message: 'Error fetching products by seller', error: error.message });
   }
 };
-//const Product = require("../models/productModel");
+// Legacy productModel path removed after centralization.
 
 const getSellerProducts = async (req, res) => {
   try {

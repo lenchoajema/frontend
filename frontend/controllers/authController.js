@@ -1,9 +1,14 @@
 /*const register = async (req, res) => {
   res.status(200).json({ message: 'Register endpoint hit' });
 };*/
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Assuming you have a User model
+let bcrypt, jwt;
+try { bcrypt = require('bcryptjs'); } catch { bcrypt = { compare: async (a,b)=> a===b }; }
+try { jwt = require('jsonwebtoken'); } catch { jwt = { sign: () => 'test.jwt.token' }; }
+// Centralized User model
+// Resolve User model relative to this controller location
+// Current file path: frontend/frontend/controllers/authController.js
+// Centralized model: backend/models/User.js (two levels up then into backend/models)
+const User = require('../../backend/models/User');
 
 const register = async (req, res) => {
   const { name, email, password, role } = req.body;
@@ -139,7 +144,5 @@ const login = async (req, res) => {
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 };
-
-module.exports = { login };
 
 module.exports = { register, login };

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 
 const CartPage = () => {
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev";
-    const [cart, setCart] = useState({ items: [], total: 0 });
+  const [cart, setCart] = useState({ items: [], total: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
      const navigate = useNavigate();
@@ -20,9 +19,7 @@ const CartPage = () => {
           throw new Error("User is not authenticated. Please log in.");
         }
   
-        const response = await axios.get("/api/user/cart", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const response = await api.get("/user/cart");
   
         console.log("Cart Fetch Response:", response.data);
   
@@ -61,13 +58,7 @@ const CartPage = () => {
       }
   
       // Send PUT request to update cart
-      const response = await axios.put(
-        `/api/user/cart/${productId}`,
-        { quantity },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  const response = await api.put(`/user/cart/${productId}`, { quantity });
   
       console.log("Response from backend:", response.data);
   
@@ -90,9 +81,7 @@ const CartPage = () => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   
-      await axios.delete(`/api/user/cart/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  await api.delete(`/user/cart/${productId}`);
 
       setCart((prevCart) => {
         const updatedItems = prevCart.items.filter((item) => item.productId !== productId);
@@ -109,11 +98,7 @@ const CartPage = () => {
   const placeOrder = async () => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      const response = await axios.post(
-        "/api/orders",
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  const response = await api.post("/orders", {});
       alert("Order placed successfully!");
       setCart({ items: [], total: 0 });
       console.log("Order placed:", response.data);
@@ -143,7 +128,7 @@ const CartPage = () => {
                       <img
                         key={index}
                         title={relativePath.split('/').pop()}
-                        src={`${axios.defaults.baseURL}/uploads/${relativePath}`}
+                        src={`${process.env.REACT_APP_BACKEND_URL || window.location.origin.replace('-3000','-5000')}/uploads/${relativePath}`}
                         alt={`${item.name}-${index}`}
                         className="product-image"
                         style={{
