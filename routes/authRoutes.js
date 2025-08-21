@@ -6,14 +6,27 @@ const jwt = require('jsonwebtoken');
 const audit = require('../utils/auditLogger');
 // In-memory user store (email -> user) for test/demo (replace with Mongo queries)
 const users = new Map();
+// Local fallback set (server.js now manages persistence; duplication kept for isolation in tests if routes used standalone)
 const refreshTokens = new Set();
+const { getRedis } = require('../utils/redisClient');
+async function storeRefresh(token, userId) {
+	const rc = getRedis();
+	if (rc) { try { await rc.set('rt:'+token, JSON.stringify({ userId, created: Date.now() }), { EX: 60*60*24*7 }); return; } catch(_) {} }
+	refreshTokens.add(token);
+}
+async function addAndReturn(token) { refreshTokens.add(token); return token; }
+async function hasRefresh(token) {
+	const rc = getRedis();
+	if (rc) { try { return !!(await rc.get('rt:'+token)); } catch(_) {} }
+	return refreshTokens.has(token);
+}
 
 function signAccess(user) {
 	return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '15m' });
 }
 function signRefresh(user) {
 	const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
-	refreshTokens.add(token);
+	storeRefresh(token, user.id).catch(()=>{});
 	return token;
 }
 
@@ -59,10 +72,15 @@ router.get('/me', (req, res) => {
 });
 
 // POST /logout (invalidate refresh token)
-router.post('/logout', (req, res) => {
-	const { refreshToken } = req.body || {};
-		if (refreshToken && refreshTokens.has(refreshToken)) { refreshTokens.delete(refreshToken); audit.event('user.logout', {}); }
-	return res.json({ message: 'Logged out' });
+router.post('/logout', async (req, res) => {
+		const { refreshToken } = req.body || {};
+		if (refreshToken) {
+			const rc = getRedis();
+			if (rc) { try { await rc.del('rt:'+refreshToken); } catch(_) {} }
+			refreshTokens.delete(refreshToken);
+			audit.event('user.logout', {});
+		}
+		return res.json({ message: 'Logged out' });
 });
 
 // Export for tests (not part of API contract)

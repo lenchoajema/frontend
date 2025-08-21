@@ -24,6 +24,7 @@ const paymentCaps = require('./utils/paymentCapabilities');
 const ordersRoutes = require('./routes/ordersRoutes');
 const stripeRoutes = require('./routes/stripeRoutes');
 const { attachRedis: attachStripeRedis } = require('./controllers/stripeController');
+const { setRedis: setSharedRedis } = require('./utils/redisClient');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
@@ -56,6 +57,7 @@ if (process.env.NODE_ENV !== 'test' && process.env.REDIS_URL && process.env.REDI
         logger.warn({ err: e }, 'Could not initialize payment capabilities from Redis');
       }
       try { attachStripeRedis(redisClient); } catch(_) {}
+      try { setSharedRedis(redisClient); } catch(_) {}
     });
 
     // Connect to Redis
@@ -353,20 +355,47 @@ app.use('/api/user/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/payments', paymentsRoutes);
-// Simple in-memory refresh token store (placeholder for Redis)
+// Refresh token persistence (Redis-backed fallback to memory)
 const refreshTokens = new Set();
+async function storeRefresh(token, userId) {
+  if (redisClient) {
+    try { await redisClient.set('rt:'+token, JSON.stringify({ userId, created: Date.now() }), { EX: 60*60*24*7 }); return; } catch(_) {}
+  }
+  refreshTokens.add(token);
+}
+async function hasRefresh(token) {
+  if (redisClient) {
+    try { return !!(await redisClient.get('rt:'+token)); } catch(_) {}
+  }
+  return refreshTokens.has(token);
+}
+async function revokeRefresh(token) {
+  if (redisClient) {
+    try { await redisClient.del('rt:'+token); } catch(_) {}
+  }
+  refreshTokens.delete(token);
+}
 app.post('/api/auth/refresh', (req, res) => {
   const { refreshToken } = req.body || {};
-  if (!refreshToken || !refreshTokens.has(refreshToken)) {
-    return res.status(401).json({ message: 'Invalid refresh token' });
-  }
-  try {
-    const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret');
-    const accessToken = jwt.sign({ id: payload.id, role: payload.role }, process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '15m' });
-    return res.json({ accessToken });
-  } catch (e) {
-    return res.status(401).json({ message: 'Expired refresh token' });
-  }
+  (async () => {
+    if (!refreshToken || !(await hasRefresh(refreshToken))) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+    try {
+      const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret');
+      const accessToken = jwt.sign({ id: payload.id, role: payload.role }, process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '15m' });
+      // Rotation (optional basic): issue new refresh token & revoke old
+      if (process.env.REFRESH_ROTATE === '1') {
+        const newToken = jwt.sign({ id: payload.id, role: payload.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
+        await storeRefresh(newToken, payload.id);
+        await revokeRefresh(refreshToken);
+        return res.json({ accessToken, refreshToken: newToken, rotated: true });
+      }
+      return res.json({ accessToken, rotated: false });
+    } catch (e) {
+      return res.status(401).json({ message: 'Expired refresh token' });
+    }
+  })();
 });
 app.use((req, res, next) => {
   logger.warn({ method: req.method, url: req.originalUrl }, 'Unhandled request');

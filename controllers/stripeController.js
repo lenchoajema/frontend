@@ -17,8 +17,11 @@ if (stripeKey && stripeKey.trim() !== '') {
 }
 const crypto = require('crypto');
 
-// Track mapping from paymentIntent -> order (in-memory; replace with DB field or Redis later)
+// Track mapping from paymentIntent -> order (in-memory + optional Redis persistence)
+// In production you'd persist this on the Order itself (store paymentIntentId inside Order) and query by it.
+// Here we keep a lightweight cache plus Redis (if available) so webhook handlers in other processes can resolve it.
 const intentOrderMap = new Map(); // paymentIntentId -> { orderId }
+const INTENT_ORDER_REDIS_PREFIX = 'pi:map:'; // key => JSON { orderId }
 
 const createPaymentIntent = async (req, res) => {
   const { amount } = req.body;
@@ -37,22 +40,22 @@ const createPaymentIntent = async (req, res) => {
         const existingRaw = await redisClient.get(redisKey);
         if (existingRaw) {
           const existing = JSON.parse(existingRaw);
-          return res.status(200).json({ clientSecret: existing.clientSecret, configured: false, stub: true, cached: true, persisted: true });
+      return res.status(200).json({ clientSecret: existing.clientSecret, configured: false, stub: true, cached: true, persisted: true, orderId });
         }
         const hash = crypto.createHash('sha256').update(cacheKey).digest('hex').slice(0, 24);
         const clientSecret = 'stub_cs_' + hash;
         await redisClient.set(redisKey, JSON.stringify({ clientSecret, amount, ts: Date.now() }), { EX: 60 * 60 });
-        return res.status(200).json({ clientSecret, configured: false, stub: true, cached: false, persisted: true });
+  return res.status(200).json({ clientSecret, configured: false, stub: true, cached: false, persisted: true, orderId });
       } catch (_) { /* fall back to memory */ }
     }
     if (idempotencyCache.has(cacheKey)) {
       const cached = idempotencyCache.get(cacheKey);
-      return res.status(200).json({ clientSecret: cached.clientSecret, configured: false, stub: true, cached: true });
+  return res.status(200).json({ clientSecret: cached.clientSecret, configured: false, stub: true, cached: true, orderId });
     }
     const hash = crypto.createHash('sha256').update(cacheKey).digest('hex').slice(0, 24);
     const clientSecret = 'stub_cs_' + hash;
     idempotencyCache.set(cacheKey, { clientSecret, amount, ts: Date.now() });
-    return res.status(200).json({ clientSecret, configured: false, stub: true, cached: false });
+  return res.status(200).json({ clientSecret, configured: false, stub: true, cached: false, orderId });
   }
 
   if (typeof amount !== 'number' || amount <= 0) {
@@ -69,12 +72,20 @@ const createPaymentIntent = async (req, res) => {
       metadata: orderId ? { orderId } : undefined,
     }, idemKey ? { idempotencyKey: idemKey } : undefined);
 
-    if (orderId) intentOrderMap.set(paymentIntent.id, { orderId });
+    if (orderId) {
+      intentOrderMap.set(paymentIntent.id, { orderId });
+      if (redisClient) {
+        // Persist mapping so other instances / later webhooks can resolve it (24h TTL)
+        redisClient.set(INTENT_ORDER_REDIS_PREFIX + paymentIntent.id, JSON.stringify({ orderId }), { EX: 60 * 60 * 24 }).catch(()=>{});
+      }
+    }
 
   console.log('Payment intent created successfully:', paymentIntent.id);
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
-      configured: true
+      configured: true,
+      orderId: orderId || null,
+      paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);
@@ -97,7 +108,17 @@ const handleWebhook = async (req, res) => {
       case 'payment_intent.succeeded': {
         const intent = event.data.object;
         const metaOrderId = intent.metadata && intent.metadata.orderId;
-        const mapping = intentOrderMap.get(intent.id) || (metaOrderId ? { orderId: metaOrderId } : null);
+        let mapping = intentOrderMap.get(intent.id) || (metaOrderId ? { orderId: metaOrderId } : null);
+        if (!mapping && redisClient) {
+          try {
+            const raw = await redisClient.get(INTENT_ORDER_REDIS_PREFIX + intent.id);
+            if (raw) {
+              mapping = JSON.parse(raw);
+              // Warm local cache to avoid repeated Redis lookups
+              if (mapping && mapping.orderId) intentOrderMap.set(intent.id, mapping);
+            }
+          } catch (_) { /* ignore redis errors */ }
+        }
         if (mapping && mapping.orderId) {
           try {
             const Order = require('../models/Order');
