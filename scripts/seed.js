@@ -8,8 +8,11 @@ const dotenv = require('dotenv');
 // Load env from backend directory regardless of CWD
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const User = require('../models/User');
-const Product = require('../models/productModel');
+const User = require('../models/User'); // legacy path (keep) 
+// Prefer new central models path
+try { module.exports && (exports.UserModel = require('../models/User')); } catch (_) {}
+// Use centralized Product model definition
+const Product = require('../models/Product');
 
 async function seed() {
   const mongoUri = process.env.MONGO_URI;

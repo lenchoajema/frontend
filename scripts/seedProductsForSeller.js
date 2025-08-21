@@ -3,7 +3,8 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const Product = require('../models/productModel');
+// Centralized Product model path
+const Product = require('../models/Product');
 const User = require('../models/User');
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
