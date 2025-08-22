@@ -11,7 +11,7 @@ const { getCapabilities, updateCapabilities, toggleProvider } = require('../util
 function requirePaymentsEnabled(req, res, next) {
   const caps = getCapabilities();
   if (!caps.enabled) {
-    return res.status(503).json({ message: 'Payments temporarily disabled by administrator.' });
+  return res.status(503).json({ code: 'PAYMENTS_DISABLED', message: 'Payments temporarily disabled by administrator.' });
   }
   return next();
 }
@@ -49,41 +49,67 @@ router.post('/admin/provider/:name/toggle', authenticateUser, isAdmin, async (re
 });
 
 // Create order (Generic) -> create Order (if DB) then Stripe intent
+const { withSpan, record } = (() => { try { return require('../utils/telemetry'); } catch(_) { return { withSpan: async (_n, fn)=> fn({ setAttribute:()=>{} }), record: ()=>{} }; } })();
+
 router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (req, res) => {
   const { total, items = [] } = req.body || {};
   if (typeof total !== 'number' || total <= 0) {
-    return res.status(400).json({ message: 'Invalid total amount.' });
+  return res.status(400).json({ code: 'PAYMENT_INVALID_TOTAL', message: 'Invalid total amount.' });
   }
   const caps = getCapabilities();
   if (!caps.providers.stripe) {
-    return res.status(503).json({ message: 'Stripe provider disabled.' });
+  return res.status(503).json({ code: 'PAYMENT_PROVIDER_DISABLED', message: 'Stripe provider disabled.' });
   }
+  const idemKey = req.headers['idempotency-key'] || req.headers['Idempotency-Key'.toLowerCase()];
+  let orderDoc = null;
+  const mongoose = require('mongoose');
+  const hasDb = mongoose.connection.readyState === 1;
   try {
-    // Create Order placeholder if DB connected
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const Order = require('../models/Order');
-        const order = await Order.create({ user: req.user.id, items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, pictures: i.pictures||[] })), total, status: 'Pending' });
-        req.body.orderId = order._id.toString();
-      } catch (_) { /* ignore order create failure for now */ }
-    }
+    let earlyResponse = null;
+    await withSpan('orders.create', async (span) => {
+      try { span.setAttribute('order.total', total); if (idemKey) span.setAttribute('order.idem_key', idemKey); } catch(_) {}
+      if (hasDb) {
+      const Order = require('../models/Order');
+      if (idemKey) {
+        orderDoc = await Order.findOne({ idemKey, user: req.user.id });
+        if (orderDoc) {
+          // Idempotent replay: short-circuit and return existing linkage after refreshing timeline
+          await orderDoc.addEvent('idempotent_reuse', { idemKey });
+          record('orders.idempotent_reuse');
+          req.body.orderId = orderDoc._id.toString();
+          req.body.amount = Math.round(orderDoc.total * 100);
+          earlyResponse = await createPaymentIntent(req, res); // downstream createPaymentIntent will see existing orderId/idempotency
+          return; // stop span work
+        }
+      }
+  orderDoc = await Order.create({ user: req.user.id, items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, pictures: i.pictures||[] })), total, status: 'Pending', idemKey, timeline: [{ type: 'created', meta: { total } }] });
+  record('orders.created');
+      req.body.orderId = orderDoc._id.toString();
+      }
+    });
+    if (earlyResponse) return earlyResponse;
     if (!req.body.orderId) {
       req.body.orderId = 'ephemeral-' + Date.now();
     }
     req.body.amount = Math.round(total * 100); // dollars -> cents
-    return await createPaymentIntent(req, res);
+    const resp = await createPaymentIntent(req, res);
+    // If payment controller returns an error (e.g., 503 stub) and we have an order doc, append failure event
+    if (orderDoc && resp && resp.statusCode && resp.statusCode >= 400) {
+      await orderDoc.addEvent('payment_attempt_failed', { status: resp.statusCode, code: resp.body && resp.body.code });
+    } else if (orderDoc) {
+      await orderDoc.addEvent('payment_intent_created', { amount: req.body.amount });
+    }
+    return resp;
   } catch (err) {
     console.error('Error creating order:', err);
-    return res.status(500).json({ message: 'Failed to create order', error: err.message });
+    if (orderDoc) {
+      try { await orderDoc.addEvent('failed', { error: err.message }); await orderDoc.updateOne({ status: 'Failed' }); } catch (_) {}
+    }
+    return res.status(500).json({ code: 'ORDER_CREATE_FAILED', message: 'Failed to create order', error: err.message });
   }
 });
 
 // Capture order placeholder
-router.post('/capture-order/:id', authenticateUser, requirePaymentsEnabled, async (req, res) => {
-  const id = req.params.id;
-  if (!id) return res.status(400).json({ message: 'Order/intent id required.' });
-  return res.json({ message: 'Capture acknowledged (placeholder)', id });
-});
+// (Removed legacy duplicate create-order route definition)
 
 module.exports = router;

@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 
 /* eslint-env node */
 const jwt = require('jsonwebtoken');
 const audit = require('../utils/auditLogger');
 // In-memory user store (email -> user) for test/demo (replace with Mongo queries)
 const users = new Map();
-// Local fallback set (server.js now manages persistence; duplication kept for isolation in tests if routes used standalone)
+// Local fallback set (shared with server.js via exported helpers to avoid divergence)
 const refreshTokens = new Set();
 const { getRedis } = require('../utils/redisClient');
 async function storeRefresh(token, userId) {
@@ -20,12 +21,19 @@ async function hasRefresh(token) {
 	if (rc) { try { return !!(await rc.get('rt:'+token)); } catch(_) {} }
 	return refreshTokens.has(token);
 }
+async function revokeRefresh(token) {
+	const rc = getRedis();
+	if (rc) { try { await rc.del('rt:'+token); } catch(_) {} }
+	refreshTokens.delete(token);
+}
 
 function signAccess(user) {
 	return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '15m' });
 }
 function signRefresh(user) {
-	const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
+	// Include random jti to avoid identical token when reissued within same second
+	const jti = (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(12).toString('hex'));
+	const token = jwt.sign({ id: user.id, role: user.role, jti }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
 	storeRefresh(token, user.id).catch(()=>{});
 	return token;
 }
@@ -73,17 +81,17 @@ router.get('/me', (req, res) => {
 
 // POST /logout (invalidate refresh token)
 router.post('/logout', async (req, res) => {
-		const { refreshToken } = req.body || {};
-		if (refreshToken) {
-			const rc = getRedis();
-			if (rc) { try { await rc.del('rt:'+refreshToken); } catch(_) {} }
-			refreshTokens.delete(refreshToken);
-			audit.event('user.logout', {});
-		}
-		return res.json({ message: 'Logged out' });
+	const { refreshToken } = req.body || {};
+	if (refreshToken) {
+		await revokeRefresh(refreshToken);
+		audit.event('user.logout', {});
+	}
+	return res.json({ message: 'Logged out' });
 });
 
 // Export for tests (not part of API contract)
+// Export for server integration & tests
 router._debug = { users, refreshTokens };
+router._refreshStore = { storeRefresh, hasRefresh, revokeRefresh };
 
 module.exports = router;

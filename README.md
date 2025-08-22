@@ -84,3 +84,7 @@ This project is licensed under the MIT License.
 - Email notifications for order status updates
 - Integration with payment gateways
 - Logging and monitoring
+
+## Observability
+
+Tracing & metrics instrumentation is provided via OpenTelemetry with optional OTLP exporters. See `OBSERVABILITY.md` for environment variables, helper APIs (`withSpan`, `record`), available counters, and roadmap.

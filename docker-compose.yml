@@ -8,15 +8,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-<<<<<<< HEAD
       MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME:-admin}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD:-changeme}"
       MONGO_INITDB_DATABASE: "${MONGO_INITDB_DATABASE:-ecommerce}"
-=======
-  MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME:-admin}"
-  MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD:-changeme}"
-  MONGO_INITDB_DATABASE: "${MONGO_INITDB_DATABASE:-ecommerce}"
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -36,58 +30,41 @@ services:
 
   backend:
     build:
-      context: ./backend
-<<<<<<< HEAD
+      context: .
       dockerfile: Dockerfile
-=======
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     container_name: ecommerce_backend
     restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-<<<<<<< HEAD
-      MONGO_URI: "${MONGO_URI:-mongodb://admin:changeme@ecommerce_mongodb:27017/ecommerce?authSource=admin}"
-      REDIS_URI: "${REDIS_URI:-redis://ecommerce_redis:6379}"
-      REDIS_URL: "${REDIS_URL:-redis://ecommerce_redis:6379}"
-      REQUEST_TRACE: "${REQUEST_TRACE:-1}"
-      STRICT_JSON: "${STRICT_JSON:-1}"
     depends_on:
       - mongodb
       - redis
-    networks:
-      - ecommerce_network
-    volumes:
-      - ./backend:/app
-      - ./trace-backups:/tmp/trace-backups
-=======
+    ports:
+      - "5000:5000"
+    environment:
       PORT: "5000"
       MONGO_URI: "${MONGO_URI:-mongodb://admin:changeme@ecommerce_mongodb:27017/ecommerce?authSource=admin}"
       REDIS_URL: "${REDIS_URL:-redis://ecommerce_redis:6379}"
+      REQUEST_TRACE: "${REQUEST_TRACE:-1}"
+      STRICT_JSON: "${STRICT_JSON:-1}"
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy_key_for_local_dev}"
+    volumes:
+      - ./:/app
+      - ../trace-backups:/tmp/trace-backups
     networks:
       - ecommerce_network
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
 
   frontend:
     build:
-      context: ./frontend
-<<<<<<< HEAD
+      context: ../frontend
       dockerfile: Dockerfile
-=======
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     container_name: ecommerce_frontend
     restart: unless-stopped
+    depends_on:
+      - backend
     ports:
       - "3000:3000"
     environment:
-<<<<<<< HEAD
-      - REDIS_URI=redis://ecommerce_redis:6379
-      - REDIS_URL=redis://ecommerce_redis:6379
-=======
       - PORT=3000
       - REACT_APP_BACKEND_URL=http://ecommerce_backend:5000
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     networks:
       - ecommerce_network
 

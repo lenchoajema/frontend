@@ -23,6 +23,8 @@ const crypto = require('crypto');
 const intentOrderMap = new Map(); // paymentIntentId -> { orderId }
 const INTENT_ORDER_REDIS_PREFIX = 'pi:map:'; // key => JSON { orderId }
 
+const { withSpan, record } = (() => { try { return require('../utils/telemetry'); } catch(_) { return { withSpan: async (_n, fn)=> fn({ setAttribute:()=>{} }), record: ()=>{} }; } })();
+
 const createPaymentIntent = async (req, res) => {
   const { amount } = req.body;
   const idemKey = req.headers['idempotency-key'] || req.headers['Idempotency-Key'.toLowerCase()];
@@ -31,7 +33,12 @@ const createPaymentIntent = async (req, res) => {
   if (!stripe) {
     // Stub / fallback mode: simulate idempotent clientSecret generation
     if (!idemKey) {
-      return res.status(503).json({ message: 'Stripe not configured. Provide STRIPE_SECRET_KEY for real processing.', configured: false });
+  return res.status(503).json({ code: 'STRIPE_NOT_CONFIGURED', message: 'Stripe not configured. Provide STRIPE_SECRET_KEY for real processing.', configured: false });
+    }
+    if (req.headers['x-simulate-payment-failure'] === '1' || req.body.simulateFailure) {
+      // Provide deterministic pseudo error for stub mode to allow negative path tests
+  record('payments.intent.failed');
+      return res.status(500).json({ code: 'PAYMENT_INTENT_SIMULATED_FAILURE', message: 'Simulated payment failure (stub mode)', configured: false, stub: true });
     }
     const cacheKey = idemKey + ':' + amount;
     const redisKey = `pi:idem:${cacheKey}`;
@@ -60,17 +67,26 @@ const createPaymentIntent = async (req, res) => {
 
   if (typeof amount !== 'number' || amount <= 0) {
     console.error('Invalid amount provided:', amount);
-    return res.status(400).json({ message: 'Invalid amount provided.' });
+  return res.status(400).json({ code: 'PAYMENT_INVALID_AMOUNT', message: 'Invalid amount provided.' });
   }
 
   try {
     console.log('Creating payment intent with amount:', amount);
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Optional failure simulation for tests / chaos (header or body simulateFailure=true)
+    if (req.headers['x-simulate-payment-failure'] === '1' || req.body.simulateFailure) {
+      console.error('Simulated payment intent failure triggered');
+  record('payments.intent.failed');
+      return res.status(500).json({ code: 'PAYMENT_INTENT_SIMULATED_FAILURE', message: 'Simulated payment failure' });
+    }
+    const paymentIntent = await withSpan('payments.stripe.create_intent', async (span) => {
+      try { span.setAttribute('payments.amount', amount); if (orderId) span.setAttribute('order.id', orderId); if (idemKey) span.setAttribute('idempotency.key', idemKey); } catch(_) {}
+      return await stripe.paymentIntents.create({
       amount,
       currency: 'usd',
       payment_method_types: ['card'],
       metadata: orderId ? { orderId } : undefined,
     }, idemKey ? { idempotencyKey: idemKey } : undefined);
+    });
 
     if (orderId) {
       intentOrderMap.set(paymentIntent.id, { orderId });
@@ -81,15 +97,30 @@ const createPaymentIntent = async (req, res) => {
     }
 
   console.log('Payment intent created successfully:', paymentIntent.id);
-    return res.status(200).json({
+  record('payments.intent.created');
+  return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       configured: true,
       orderId: orderId || null,
       paymentIntentId: paymentIntent.id,
     });
+    // Append payment_intent_created timeline event if we have an order link
+    if (orderId) {
+      try {
+        const Order = require('../models/Order');
+        await Order.findByIdAndUpdate(orderId, { $push: { timeline: { type: 'payment_intent_created', meta: { paymentIntentId: paymentIntent.id, amount } } } });
+      } catch(_) {}
+    }
   } catch (error) {
     console.error('Error creating payment intent:', error);
-    return res.status(500).json({ message: 'Failed to create payment intent.', error: error.message });
+  if (orderId) {
+      try {
+        const Order = require('../models/Order');
+        await Order.findByIdAndUpdate(orderId, { status: 'Failed', $push: { timeline: { type: 'payment_failed', meta: { error: error.message } } } });
+      } catch(_) {}
+    }
+  record('payments.intent.failed');
+    return res.status(500).json({ code: 'PAYMENT_INTENT_ERROR', message: 'Failed to create payment intent.', error: error.message });
   }
 };
 
@@ -97,10 +128,10 @@ const createPaymentIntent = async (req, res) => {
 const handleWebhook = async (req, res) => {
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!stripe || !endpointSecret) {
-    return res.status(503).json({ message: 'Webhook not fully configured' });
+    return res.status(503).json({ code: 'WEBHOOK_NOT_CONFIGURED', message: 'Webhook not fully configured' });
   }
   const sig = req.headers['stripe-signature'];
-  if (!sig) return res.status(400).json({ message: 'Missing stripe-signature header' });
+  if (!sig) return res.status(400).json({ code: 'WEBHOOK_SIG_MISSING', message: 'Missing stripe-signature header' });
   try {
     const event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
     // Minimal event type handling (expand as needed)
@@ -122,7 +153,11 @@ const handleWebhook = async (req, res) => {
         if (mapping && mapping.orderId) {
           try {
             const Order = require('../models/Order');
-            await Order.findByIdAndUpdate(mapping.orderId, { status: 'Completed' });
+            // Update status and append timeline event atomically
+            await Order.findByIdAndUpdate(mapping.orderId, {
+              status: 'Completed',
+              $push: { timeline: { type: 'payment_succeeded', meta: { paymentIntentId: intent.id } } }
+            });
           } catch (_) { /* swallow webhook errors to avoid repeated retries noise */ }
         }
         break; }
@@ -130,7 +165,7 @@ const handleWebhook = async (req, res) => {
     }
     return res.status(200).json({ received: true, type: event.type });
   } catch (err) {
-    return res.status(400).json({ message: 'Invalid signature', error: err.message });
+  return res.status(400).json({ code: 'WEBHOOK_INVALID_SIGNATURE', message: 'Invalid signature', error: err.message });
   }
 };
 

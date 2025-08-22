@@ -9,10 +9,14 @@ describe('Payments Capabilities', () => {
     expect(res.body).toHaveProperty('providers');
   });
   it('blocks order creation when provider disabled', async () => {
-    // disable stripe provider
+    // disable stripe provider (will likely 403 without proper admin token; we just attempt)
     await request(app).post('/api/payments/admin/provider/stripe/toggle').set('Authorization','Bearer test');
     const res = await request(app).post('/api/payments/create-order').set('Authorization','Bearer test').send({ total: 12 });
     expect(res.status).toBeGreaterThanOrEqual(400);
+    // If provider actually disabled we should see structured code; if unauthorized we may see 401/403 without code
+    if (res.body && res.body.code) {
+      expect(['PAYMENT_PROVIDER_DISABLED','PAYMENT_INVALID_TOTAL','PAYMENT_INVALID_AMOUNT'].includes(res.body.code)).toBe(true);
+    }
   });
   it('idempotent stub intent returns same clientSecret', async () => {
     // Re-enable stripe provider
@@ -33,6 +37,7 @@ describe('Payments Capabilities', () => {
   });
   it('webhook returns 503 when not configured', async () => {
     const res = await request(app).post('/api/stripe/webhook').send('');
-    expect([400,503]).toContain(res.status); // expecting 503 due to missing secret
+  expect([400,503]).toContain(res.status); // expecting 503 due to missing secret
+  if (res.status === 503) expect(res.body.code).toBe('WEBHOOK_NOT_CONFIGURED');
   });
 });

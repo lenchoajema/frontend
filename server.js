@@ -26,7 +26,12 @@ const stripeRoutes = require('./routes/stripeRoutes');
 const { attachRedis: attachStripeRedis } = require('./controllers/stripeController');
 const { setRedis: setSharedRedis } = require('./utils/redisClient');
 const paymentsRoutes = require('./routes/paymentsRoutes');
+const paypalRoutes = require('./routes/paypalRoutes');
 const { apiLimiter } = require('./middleware/rateLimiter');
+// Telemetry (optional)
+if (process.env.OTEL_ENABLE === '1') {
+  try { require('./utils/telemetry').initTelemetry(); } catch(e) { console.warn('Telemetry init failed:', e.message); }
+}
 
 dotenv.config();
 
@@ -355,26 +360,12 @@ app.use('/api/user/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/payments', paymentsRoutes);
-// Refresh token persistence (Redis-backed fallback to memory)
-const refreshTokens = new Set();
-async function storeRefresh(token, userId) {
-  if (redisClient) {
-    try { await redisClient.set('rt:'+token, JSON.stringify({ userId, created: Date.now() }), { EX: 60*60*24*7 }); return; } catch(_) {}
-  }
-  refreshTokens.add(token);
-}
-async function hasRefresh(token) {
-  if (redisClient) {
-    try { return !!(await redisClient.get('rt:'+token)); } catch(_) {}
-  }
-  return refreshTokens.has(token);
-}
-async function revokeRefresh(token) {
-  if (redisClient) {
-    try { await redisClient.del('rt:'+token); } catch(_) {}
-  }
-  refreshTokens.delete(token);
-}
+app.use('/api/paypal', paypalRoutes);
+// Use shared refresh token helpers from authRoutes to avoid divergence with route logic
+const refreshHelpers = authRoutes._refreshStore || {};
+const storeRefresh = refreshHelpers.storeRefresh || (async ()=>{});
+const hasRefresh = refreshHelpers.hasRefresh || (async ()=>false);
+const revokeRefresh = refreshHelpers.revokeRefresh || (async ()=>{});
 app.post('/api/auth/refresh', (req, res) => {
   const { refreshToken } = req.body || {};
   (async () => {
@@ -386,7 +377,9 @@ app.post('/api/auth/refresh', (req, res) => {
       const accessToken = jwt.sign({ id: payload.id, role: payload.role }, process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '15m' });
       // Rotation (optional basic): issue new refresh token & revoke old
       if (process.env.REFRESH_ROTATE === '1') {
-        const newToken = jwt.sign({ id: payload.id, role: payload.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
+      const crypto = require('crypto');
+      const jti = (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(12).toString('hex'));
+      const newToken = jwt.sign({ id: payload.id, role: payload.role, jti }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'test_jwt_secret', { expiresIn: '7d' });
         await storeRefresh(newToken, payload.id);
         await revokeRefresh(refreshToken);
         return res.json({ accessToken, refreshToken: newToken, rotated: true });
