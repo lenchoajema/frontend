@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-// Add debugging logs to identify undefined properties
-=======
 // Stripe controller with safe fallback if STRIPE_SECRET_KEY is not provided
 let stripe = null;
 const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -15,15 +12,10 @@ if (stripeKey && stripeKey.trim() !== '') {
   console.warn('⚠️  STRIPE_SECRET_KEY not set. Payment intent endpoint will return 503.');
 }
 
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
 const createPaymentIntent = async (req, res) => {
   const { amount } = req.body;
 
   if (!stripe) {
-<<<<<<< HEAD
-    console.error('Stripe SDK is not initialized. Check STRIPE_SECRET_KEY.');
-=======
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     return res.status(503).json({
       message: 'Stripe not configured. Set STRIPE_SECRET_KEY to enable payments.',
       configured: false
@@ -31,10 +23,6 @@ const createPaymentIntent = async (req, res) => {
   }
 
   if (typeof amount !== 'number' || amount <= 0) {
-<<<<<<< HEAD
-    console.error('Invalid amount provided:', amount);
-=======
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     return res.status(400).json({ message: 'Invalid amount provided.' });
   }
 
@@ -46,10 +34,6 @@ const createPaymentIntent = async (req, res) => {
       payment_method_types: ['card'],
     });
 
-<<<<<<< HEAD
-    console.log('Payment intent created successfully:', paymentIntent);
-=======
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       configured: true
@@ -58,10 +42,6 @@ const createPaymentIntent = async (req, res) => {
     console.error('Error creating payment intent:', error);
     return res.status(500).json({ message: 'Failed to create payment intent.', error: error.message });
   }
-<<<<<<< HEAD
-};
-=======
 };
 
 module.exports = { createPaymentIntent };
->>>>>>> 4741d68254aaf2626ca331a2b8e1f40d763f1a28
