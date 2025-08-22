@@ -34,6 +34,9 @@ services:
       dockerfile: Dockerfile
     container_name: ecommerce_backend
     restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
     ports:
       - "5000:5000"
     environment:
@@ -42,105 +45,32 @@ services:
       REQUEST_TRACE: "${REQUEST_TRACE:-1}"
       STRICT_JSON: "${STRICT_JSON:-1}"
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy_key_for_local_dev}"
-    depends_on:
-      - mongodb
-      - redis
-    networks:
-      - ecommerce_network
     volumes:
       - ./backend:/app
-      version: '3.8'
-
-      services:
-        mongodb:
-          image: mongo:7.0
-          container_name: ecommerce_mongodb
-          restart: unless-stopped
-          ports:
-            - "27017:27017"
-          environment:
-            MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME:-admin}"
-            MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD:-changeme}"
-            MONGO_INITDB_DATABASE: "${MONGO_INITDB_DATABASE:-ecommerce}"
-          volumes:
-            - mongodb_data:/data/db
-          networks:
-            - ecommerce_network
-
-        redis:
-          image: redis:7.2-alpine
-          container_name: ecommerce_redis
-          restart: unless-stopped
-          ports:
-            - "6379:6379"
-          command: redis-server --appendonly yes
-          volumes:
-            - redis_data:/data
-          networks:
-            - ecommerce_network
-
-        backend:
-          build:
-            context: ./backend
-            dockerfile: Dockerfile
-          container_name: ecommerce_backend
-          restart: unless-stopped
-          ports:
-            - "5000:5000"
-          environment:
-            MONGO_URI: "${MONGO_URI:-mongodb://admin:changeme@ecommerce_mongodb:27017/ecommerce?authSource=admin}"
-            REDIS_URL: "${REDIS_URL:-redis://ecommerce_redis:6379}"
-            REQUEST_TRACE: "${REQUEST_TRACE:-1}"
-            STRICT_JSON: "${STRICT_JSON:-1}"
-            STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy_key_for_local_dev}"
-          depends_on:
-            - mongodb
-            - redis
-          networks:
-            - ecommerce_network
-          volumes:
-            - ./backend:/app
-            - ./trace-backups:/tmp/trace-backups
-
-        frontend:
-          build:
-            context: ./frontend
-            dockerfile: Dockerfile
-          container_name: ecommerce_frontend
-          restart: unless-stopped
-          ports:
-            - "3000:3000"
-          environment:
-            - PORT=3000
-            - REACT_APP_BACKEND_URL=http://ecommerce_backend:5000
-          networks:
-            - ecommerce_network
-
-      volumes:
-        mongodb_data:
-        redis_data:
-
-      networks:
-        ecommerce_network:
-          driver: bridge
-        build:
-          context: ./frontend
-          dockerfile: Dockerfile
-        container_name: ecommerce_frontend
-        restart: unless-stopped
-        ports:
-          - "3000:3000"
-        environment:
-          - PORT=3000
-          - REACT_APP_BACKEND_URL=http://ecommerce_backend:5000
-        networks:
-          - ecommerce_network
-
-    volumes:
-      mongodb_data:
-      redis_data:
-
+      - ./trace-backups:/tmp/trace-backups
     networks:
-      ecommerce_network:
-        driver: bridge
-            - "5000:5000"
+      - ecommerce_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - REACT_APP_BACKEND_URL=http://ecommerce_backend:5000
+    networks:
+      - ecommerce_network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  ecommerce_network:
+    driver: bridge
