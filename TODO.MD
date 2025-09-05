@@ -17,8 +17,8 @@ CI/CD Pipeline Setup
 Set up automated pipelines (e.g., GitHub Actions/Jenkins) with linting, unit, and integration tests.
 Week 1-2
 Ensures code quality and controlled deployments.
-🔧 PRIORITY: Complete pipeline implementation
-Addition: Include security scanning tools (e.g., SonarQube) in the pipeline.
+Completed (Backend CI Added)
+Addition: Add security scanning (npm audit, Snyk) & coverage badge upload.
 3
 Security Audits & Penetration Testing (NEW)
 Perform OWASP Top 10 vulnerability scans and third-party security audits.
@@ -38,8 +38,8 @@ Automated Testing Framework
 Implement unit, integration, and end-to-end tests (Jest, Cypress).
 Week 2
 Reduce regressions and speed up development.
-Not Started
-Addition: Include load testing (Locust/JMeter) for high-traffic scenarios.
+In Progress (Backend Jest + Supertest: 43 tests, ~69% lines)
+Addition: Add Cypress E2E + load tests (k6/JMeter) + Mongo Memory Server for DB assertions.
 6
 Product Management APIs
 Create APIs for product CRUD, filtering, sorting, and pagination.
@@ -61,6 +61,7 @@ Week 3
 Proactively resolve API/database bottlenecks.
 Not Started
 Critical for Scalability: Add early to track performance trends.
+Update: Logging & basic request tracing in place; next add OpenTelemetry exporter.
 9
 Order Management
 Place orders, view history, and track statuses.
@@ -74,14 +75,14 @@ Build checkout with order summary, shipping, and payment options.
 Week 4
 Seamless purchasing experience.
 Completed
-Addition: Error handling for payment failures (e.g., Stripe/PayPal alerts).
+Addition: Payment failure simulation & user-facing retry messaging (pending).
 11
 Payment Gateway Integration
 Integrate Stripe and PayPal securely.
 Week 5
 Critical for transactions.
-🔧 PRIORITY: Complete Stripe integration
-Addition: PCI-DSS compliance checks for card data handling.
+In Progress (Stripe intents + webhook + idempotency + structured error codes)
+Addition: Add PayPal stub, map payment lifecycle to order timeline, PCI-DSS checklist.
 12
 API Gateway Setup (NEW)
 Implement Kong/AWS API Gateway for microservices.
@@ -89,6 +90,7 @@ Week 5
 Centralize auth, rate limiting, and routing.
 Not Started
 Architecture Addition: Prepares for microservices split.
+Planned: Provide declarative Kong config & Docker compose service.
 13
 Two-Factor Authentication (2FA)
 Add SMS/email-based 2FA for all users.
@@ -110,6 +112,7 @@ Week 7
 Revenue scalability.
 Not Started
 Addition: Integrate Stripe Billing for recurring payments.
+Prereq: Need Seller plans model & Stripe product/price mapping.
 16
 Shipping API Integration (NEW)
 Connect FedEx/DHL for real-time shipping rates.
@@ -117,6 +120,7 @@ Week 7
 Accurate shipping cost calculations.
 Not Started
 Logistics Addition: Critical for global sellers.
+Next: Abstract shipping provider interface before concrete integration.
 17
 Navbar & Footer
 Role-based links and mobile responsiveness.
@@ -131,6 +135,7 @@ Week 8
 Enhanced UX.
 Not Started
 Addition: Include in-app notifications for updates.
+Backend Support Needed: Notification model + WebSocket channel.
 19
 SEO Audit (NEW)
 Optimize product schema markup, URLs, and sitemaps.
@@ -145,6 +150,7 @@ Week 8-9
 Scalability preparation.
 Not Started
 Addition: Add service mesh (Istio) for inter-service communication.
+Current State: Architecture notes drafted; extraction boundaries identified (auth, payments, catalog, orders).
 21
 Personalized Recommendations
 Suggest products via browsing/purchase history.
@@ -152,6 +158,7 @@ Week 9
 Boost cross-selling.
 Not Started
 Addition: Use collaborative filtering (machine learning).
+Data Needed: Event collection pipeline (view, add_to_cart, purchase) TBD.
 22
 Advanced Product Filters
 Add rating, shipping time, and material filters.
@@ -159,6 +166,7 @@ Week 9
 Better discoverability.
 Not Started
 Addition: Cache filter results in Redis for performance.
+Indexing: Add composite indexes (price, rating, updatedAt) before release.
 23
 Analytics Dashboard for Sellers
 Sales trends, product performance, and customer insights.
@@ -166,6 +174,7 @@ Week 10
 Data-driven decisions.
 Not Started
 Addition: Export reports to CSV/PDF.
+Foundation: Order timeline/events already capturing payment stages (extend for analytics).
 24
 Dynamic Pricing
 Adjust prices based on demand and stock.
@@ -173,6 +182,7 @@ Week 10
 Revenue optimization.
 Not Started
 Addition: Competitor price monitoring integration.
+Dependency: Inventory & sales velocity metrics pipeline.
 25
 Inventory Forecasting
 AI-driven stock predictions.
@@ -180,6 +190,7 @@ Week 11
 Prevent stockouts.
 Not Started
 Addition: Integrate with ERP systems (e.g., SAP).
+Prereq: Historical order + inventory delta store; add stock movement audit log.
 26
 Abandoned Cart Recovery
 Email/SMS reminders for abandoned carts.
@@ -187,6 +198,7 @@ Week 12
 Recover lost sales.
 Not Started
 Addition: Offer discounts for cart recovery.
+Need: Cart lastActivity timestamp + notification scheduling worker.
 27
 Disaster Recovery Plan (NEW)
 Backup strategies and failover mechanisms.
@@ -194,6 +206,7 @@ Week 12
 Ensure business continuity.
 Not Started
 Critical Addition: Test backup restoration processes.
+Add: Automated Mongo & Redis snapshot scripts + restore drills doc.
 28
 Containerization & Orchestration
 Docker Compose and Kubernetes manifests.
@@ -201,6 +214,7 @@ Week 12-13
 Scalable deployments.
 Not Started
 Addition: Use Helm charts for Kubernetes.
+Next: Author base k8s manifests (Deployment, Service, Ingress) then Helm-ify.
 29
 CMS for Blogs/Banners
 Manage content via rich-text editor.
@@ -215,6 +229,7 @@ Week 14
 Customer retention.
 Not Started
 Addition: Tiered rewards (e.g., silver/gold/platinum).
+Design: Points ledger + accrual rules engine required.
 31
 Live Chat with Sellers
 Real-time chat using WebSocket.
@@ -222,6 +237,7 @@ Week 14
 Build trust.
 Not Started
 Addition: Save chat transcripts for dispute resolution.
+Infra: WebSocket gateway or Socket.io service planned.
 32
 Interactive Map
 Show nearby sellers via Google Maps.
@@ -229,6 +245,7 @@ Week 15
 Local discovery.
 Not Started
 Addition: Geofencing for location-based promotions.
+Need: Seller geolocation fields & spatial index.
 33
 Referral Program
 Reward users for inviting friends.
@@ -243,6 +260,7 @@ Week 17
 Optimize conversion rates.
 Not Started
 Marketing Addition: Test checkout flow variations.
+Prep: Feature flag service baseline required.
 35
 User-Generated Content (UGC)
 Allow photo/video uploads for products.
@@ -257,6 +275,7 @@ Week 19
 Engagement tool.
 Not Started
 Addition: Preference center for notification settings.
+Backend: Subscription tokens store + topic grouping.
 37
 Multilingual & Currency Support
 Localize language, date formats, and pricing.
@@ -264,6 +283,7 @@ Week 20
 Global expansion.
 Not Started
 Addition: Integrate regional payment methods (e.g., Alipay).
+Plan: Currency conversion service & i18n resource pipeline.
 38
 Gamification Elements
 Badges, points, and achievements.
@@ -285,6 +305,7 @@ Week 23
 Enterprise scalability.
 Not Started
 Addition: GraphQL API for flexible queries.
+Incremental: Introduce GraphQL gateway after API Gateway baseline.
 41
 Affiliate Marketing (NEW)
 Enable sellers to create affiliate programs.
@@ -299,4 +320,5 @@ Week 25
 Reduce signup friction and boost marketing.
 Not Started
 UX Addition: Increase social proof.
+Add: OAuth2 provider abstraction + token linking table.
 

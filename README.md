@@ -88,3 +88,24 @@ This project is licensed under the MIT License.
 ## Observability
 
 Tracing & metrics instrumentation is provided via OpenTelemetry with optional OTLP exporters. See `OBSERVABILITY.md` for environment variables, helper APIs (`withSpan`, `record`), available counters, and roadmap.
+
+## Payments quick test
+
+We added a helper script to exercise the create-order endpoint with strict JSON and Authorization headers.
+
+- Script: `scripts/testCreateOrder.js`
+- Usage:
+
+```bash
+node scripts/testCreateOrder.js http://localhost:5000 <JWT_TOKEN> 19.99
+```
+
+It posts `{ total }` to `/api/payments/create-order` and prints the status/body. Works with Codespaces URLs too (pass the `https://...-5000.app.github.dev` base).
+
+## Frontend Axios base
+
+Frontend now uses `frontend/src/services/api.js` to centralize the Axios instance, automatically picking the backend base URL:
+
+- Uses `REACT_APP_BACKEND_URL` when set (e.g., `https://...-5000.app.github.dev`), appends `/api`.
+- In Codespaces, maps `-3000` to `-5000` automatically.
+- Falls back to `/api` if served behind the same domain.
