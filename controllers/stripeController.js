@@ -11,11 +11,11 @@ if (stripeKey && stripeKey.trim() !== '') {
 } else {
   console.warn('⚠️  STRIPE_SECRET_KEY not set. Payment intent endpoint will return 503.');
 }
-
 const createPaymentIntent = async (req, res) => {
   const { amount } = req.body;
 
   if (!stripe) {
+    console.error('Stripe SDK is not initialized. Check STRIPE_SECRET_KEY.');
     return res.status(503).json({
       message: 'Stripe not configured. Set STRIPE_SECRET_KEY to enable payments.',
       configured: false
@@ -23,6 +23,7 @@ const createPaymentIntent = async (req, res) => {
   }
 
   if (typeof amount !== 'number' || amount <= 0) {
+    console.error('Invalid amount provided:', amount);
     return res.status(400).json({ message: 'Invalid amount provided.' });
   }
 
@@ -34,6 +35,7 @@ const createPaymentIntent = async (req, res) => {
       payment_method_types: ['card'],
     });
 
+  console.log('Payment intent created successfully:', paymentIntent.id);
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       configured: true

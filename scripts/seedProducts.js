@@ -7,7 +7,8 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const Product = require('../models/productModel');
+// Centralized Product model path
+const Product = require('../models/Product');
 const User = require('../models/User');
 
 const DESCRIPTIONS = [
