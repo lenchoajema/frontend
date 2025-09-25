@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const mongoose = require('mongoose');
+const cookie = require('cookie');
+let Cart; try { Cart = require('../models/Cart'); } catch (_) { Cart = null; }
 
 /* eslint-env node */
 const jwt = require('jsonwebtoken');
@@ -39,7 +42,7 @@ function signRefresh(user) {
 }
 
 // POST /register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
 	const { name, email, password } = req.body || {};
 	if (!name || !email || !password) return res.status(400).json({ message: 'All fields are required.' });
 	if (users.has(email)) return res.status(409).json({ message: 'Email already registered.' });
@@ -48,11 +51,30 @@ router.post('/register', (req, res) => {
 		audit.event('user.register', { userId: user.id, email });
 	const accessToken = signAccess(user);
 	const refreshToken = signRefresh(user);
-	return res.status(201).json({ user: { id: user.id, name, email, role: user.role }, accessToken, refreshToken });
+	let headers = {};
+	try {
+		if (Cart && mongoose.connection.readyState === 1) {
+			const cookies = cookie.parse(req.headers.cookie || '');
+			const g = cookies.gcart ? JSON.parse(decodeURIComponent(cookies.gcart)) : null;
+			if (g && Array.isArray(g.items) && g.items.length) {
+				let cart = await Cart.findOne({ user: user.id });
+				if (!cart) cart = new Cart({ user: user.id, items: [], total: 0 });
+				for (const it of g.items) {
+					const idx = cart.items.findIndex(i => i.productId === String(it.productId));
+					if (idx >= 0) cart.items[idx].quantity += Number(it.quantity || 1);
+					else cart.items.push({ productId: String(it.productId), name: it.name, price: Number(it.price||0), pictures: it.pictures||[], quantity: Number(it.quantity||1) });
+				}
+				cart.total = (cart.items || []).reduce((s, i) => s + Number(i.price||0)*Number(i.quantity||0), 0);
+				await cart.save();
+				headers['Set-Cookie'] = 'gcart=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
+			}
+		}
+	} catch (_) {}
+	return res.status(201).set(headers).json({ user: { id: user.id, name, email, role: user.role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
 });
 
 // POST /login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
 	const { email, password } = req.body || {};
 	if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
 	const user = users.get(email);
@@ -60,7 +82,26 @@ router.post('/login', (req, res) => {
 	const accessToken = signAccess(user);
 	const refreshToken = signRefresh(user);
 		audit.event('user.login', { userId: user.id, email });
-		return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, accessToken, refreshToken });
+	let headers = {};
+	try {
+		if (Cart && mongoose.connection.readyState === 1) {
+			const cookies = cookie.parse(req.headers.cookie || '');
+			const g = cookies.gcart ? JSON.parse(decodeURIComponent(cookies.gcart)) : null;
+			if (g && Array.isArray(g.items) && g.items.length) {
+				let cart = await Cart.findOne({ user: user.id });
+				if (!cart) cart = new Cart({ user: user.id, items: [], total: 0 });
+				for (const it of g.items) {
+					const idx = cart.items.findIndex(i => i.productId === String(it.productId));
+					if (idx >= 0) cart.items[idx].quantity += Number(it.quantity || 1);
+					else cart.items.push({ productId: String(it.productId), name: it.name, price: Number(it.price||0), pictures: it.pictures||[], quantity: Number(it.quantity||1) });
+				}
+				cart.total = (cart.items || []).reduce((s, i) => s + Number(i.price||0)*Number(i.quantity||0), 0);
+				await cart.save();
+				headers['Set-Cookie'] = 'gcart=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
+			}
+		}
+	} catch (_) {}
+	return res.set(headers).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
 });
 
 // GET /me

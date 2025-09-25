@@ -7,6 +7,7 @@ const isAdmin = requireRole('admin');
 const { createPaymentIntent } = require('../controllers/stripeController');
 const audit = require('../utils/auditLogger');
 const { getCapabilities, updateCapabilities, toggleProvider } = require('../utils/paymentCapabilities');
+const Cart = require('../models/Cart');
 
 function requirePaymentsEnabled(req, res, next) {
   const caps = getCapabilities();
@@ -52,9 +53,17 @@ router.post('/admin/provider/:name/toggle', authenticateUser, isAdmin, async (re
 const { withSpan, record } = (() => { try { return require('../utils/telemetry'); } catch(_) { return { withSpan: async (_n, fn)=> fn({ setAttribute:()=>{} }), record: ()=>{} }; } })();
 
 router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (req, res) => {
-  const { total, items = [] } = req.body || {};
-  if (typeof total !== 'number' || total <= 0) {
-  return res.status(400).json({ code: 'PAYMENT_INVALID_TOTAL', message: 'Invalid total amount.' });
+  let { total, items = [] } = req.body || {};
+  const mongoose = require('mongoose');
+  const hasDb = mongoose.connection.readyState === 1;
+  if (!Array.isArray(items) || items.length === 0 || typeof total !== 'number' || total <= 0) {
+    if (!hasDb) return res.status(400).json({ code: 'PAYMENT_INVALID_TOTAL', message: 'Invalid total amount.' });
+    const cart = await Cart.findOne({ user: req.user.id }).lean();
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return res.status(400).json({ code: 'CART_EMPTY', message: 'Your cart is empty.' });
+    }
+    items = cart.items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, pictures: i.pictures || [] }));
+    total = cart.total;
   }
   const caps = getCapabilities();
   if (!caps.providers.stripe) {
@@ -62,8 +71,6 @@ router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (re
   }
   const idemKey = req.headers['idempotency-key'] || req.headers['Idempotency-Key'.toLowerCase()];
   let orderDoc = null;
-  const mongoose = require('mongoose');
-  const hasDb = mongoose.connection.readyState === 1;
   try {
     let earlyResponse = null;
     await withSpan('orders.create', async (span) => {
@@ -91,7 +98,7 @@ router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (re
     if (!req.body.orderId) {
       req.body.orderId = 'ephemeral-' + Date.now();
     }
-    req.body.amount = Math.round(total * 100); // dollars -> cents
+  req.body.amount = Math.round(total * 100); // dollars -> cents
     const resp = await createPaymentIntent(req, res);
     // If payment controller returns an error (e.g., 503 stub) and we have an order doc, append failure event
     if (orderDoc && resp && resp.statusCode && resp.statusCode >= 400) {
@@ -110,6 +117,29 @@ router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (re
 });
 
 // Capture order placeholder
-// (Removed legacy duplicate create-order route definition)
+router.post('/capture-order/:id', authenticateUser, requirePaymentsEnabled, async (req, res) => {
+  const orderId = req.params.id;
+  try {
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const Order = require('../models/Order');
+        const order = await Order.findById(orderId).catch(()=>null);
+        if (order) {
+          await order.updateOne({ status: 'Completed' });
+          if (order.addEvent) await order.addEvent('payment_captured', { provider: 'stub', extId: orderId });
+          // Clear user's cart only when status is Completed
+          try {
+            const Cart = require('../models/Cart');
+            if (order && order.user) {
+              await Cart.deleteOne({ user: order.user }).catch(()=>{});
+            }
+          } catch(_) {}
+        }
+      } catch (_) { /* ignore */ }
+    }
+  } catch (_) { /* ignore */ }
+  return res.json({ captured: true, id: orderId });
+});
 
 module.exports = router;
