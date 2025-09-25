@@ -25,14 +25,20 @@ router.get('/', async (req, res) => {
 
 	// If no DB connection (tests) return empty deterministic structure quickly
 	if (!Product || mongoose.connection.readyState !== 1) {
-		return res.json({ items: [], total: 0, page, pages: 0 });
+		res.set('X-Total', '0');
+		res.set('X-Page', String(page));
+		res.set('X-Pages', '0');
+		return res.json([]);
 	}
 	const skip = (page - 1) * limit;
 	const [items, total] = await Promise.all([
 		Product.find(filter).skip(skip).limit(limit).lean().exec(),
 		Product.countDocuments(filter)
 	]);
-	return res.json({ items, total, page, pages: Math.ceil(total / limit) });
+	res.set('X-Total', String(total));
+	res.set('X-Page', String(page));
+	res.set('X-Pages', String(Math.ceil(total / limit)));
+	return res.json(items);
 });
 
 router.get('/:id', async (req, res) => {
