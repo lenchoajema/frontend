@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchCart } from '../redux/cartSlice';
 
 export default function Header() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const cart = useSelector((s) => s.cart);
   const [q, setQ] = useState('');
   const onSubmit = (e) => {
@@ -13,6 +15,7 @@ export default function Header() {
     navigate('/?' + params.toString());
   };
   const count = (cart.items || []).reduce((a, i) => a + (i.quantity || 0), 0);
+  useEffect(() => { dispatch(fetchCart()); }, [dispatch]);
   return (
     <nav className="navbar navbar-expand navbar-light bg-light">
       <div className="container">

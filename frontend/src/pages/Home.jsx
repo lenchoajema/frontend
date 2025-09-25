@@ -49,7 +49,16 @@ export default function Home() {
               <div className="card-body p-2">
                 <Link className="small text-truncate d-block text-decoration-none" to={`/product/${p._id || p.id}`} title={p.name}>{p.name}</Link>
                 <div className="fw-bold">${Number(p.price).toFixed(2)}</div>
-                <button className="btn btn-sm btn-primary mt-2" onClick={() => dispatch(addToCart({ productId: p._id || p.id, quantity: 1 }))}>Add</button>
+                <button
+                  className="btn btn-sm btn-primary mt-2"
+                  onClick={async () => {
+                    await dispatch(addToCart({ productId: p._id || p.id, quantity: 1 }));
+                    const { fetchCart } = await import('../redux/cartSlice');
+                    dispatch(fetchCart());
+                  }}
+                >
+                  Add
+                </button>
               </div>
             </div>
           </div>
