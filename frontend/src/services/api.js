@@ -13,10 +13,10 @@ function resolveBaseURL() {
     const isCodespaces = origin.includes('.github.dev');
     const isHttpsPage = origin.startsWith('https://');
     if (isCodespaces && isHttpsPage) {
-      // Map Codespaces port suffix
-      if (origin.includes('-3000.')) {
-        return origin.replace('-3000.', '-5000.') + '/api';
-      }
+      // Map Codespaces port suffix to backend 5000
+      if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+      if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+      if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
     }
   } catch (_) {}
 
@@ -29,9 +29,9 @@ function resolveBaseURL() {
       const looksInternalDocker = /ecommerce_backend|localhost:5000/.test(envUrl);
       if (isHttpsPage && looksInternalDocker) {
         // Derive from origin (works for Codespaces or reverse-proxy setups)
-        if (origin.includes('-3000.')) {
-          return origin.replace('-3000.', '-5000.') + '/api';
-        }
+        if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+        if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+        if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
       }
     } catch (_) {}
     return envUrl.replace(/\/$/, '') + '/api';
@@ -40,9 +40,9 @@ function resolveBaseURL() {
   // 2) Infer from current origin
   try {
     const origin = window.location.origin;
-    if (origin.includes('-3000.')) {
-      return origin.replace('-3000.', '-5000.') + '/api';
-    }
+    if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+    if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+    if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
     if (origin.includes('localhost:3000')) {
       return 'http://localhost:5000/api';
     }

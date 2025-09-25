@@ -4,13 +4,14 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 const app = express();
 const CANDIDATE_DIRS = [
-  // Prefer Root build first (we can rebuild this reliably)
-  path.join(__dirname, '..', 'build'),
-  // Nested frontend/build if present
+  // Prefer nested CRA build first (source of truth for UI)
   path.join(__dirname, '..', 'frontend', 'build'),
+  // Fallback to a root build if present
+  path.join(__dirname, '..', 'build'),
   // As a last resort, a root public dir (for simple static sites)
   path.join(__dirname, '..', 'public'),
 ];
@@ -31,6 +32,37 @@ if (!baseDir) {
   console.error('Please build the frontend (e.g., cd frontend && npm ci && npm run build).');
   process.exit(1);
 }
+
+// Same-origin API reverse proxy -> backend 5000
+app.use('/api', (req, res) => {
+  try {
+    const targetPath = req.originalUrl; // already starts with /api
+    const options = {
+      protocol: 'http:',
+      hostname: '127.0.0.1',
+      port: 5000,
+      path: targetPath,
+      method: req.method,
+      headers: { ...req.headers, host: '127.0.0.1:5000' },
+    };
+    const proxyReq = http.request(options, (proxyRes) => {
+      // Pass through status and headers
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    });
+    proxyReq.on('error', (err) => {
+      console.error('API proxy error:', err.message);
+      if (!res.headersSent) res.statusCode = 502;
+      res.end('Bad Gateway');
+    });
+    // Stream body
+    if (req.readable) req.pipe(proxyReq, { end: true }); else proxyReq.end();
+  } catch (e) {
+    console.error('API proxy exception:', e.message);
+    if (!res.headersSent) res.statusCode = 500;
+    res.end('Proxy Error');
+  }
+});
 
 app.use(express.static(baseDir));
 app.get('*', (_req, res) => {

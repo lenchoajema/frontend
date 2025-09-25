@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
 import { createOrder, captureOrder } from '../utils/api';
-// NOTE: createOrder / captureOrder currently point to /payments/* endpoints.
-// Ensure backend exposes POST /api/payments/create-order and /api/payments/capture-order/:id
-// or adjust helper paths in utils/api.js accordingly.
+// NOTE: Backend currently exposes POST /api/payments/create-order which creates a Stripe intent (stub if STRIPE_SECRET_KEY missing).
 
 const Checkout = ({ total }) => {
     useEffect(() => {

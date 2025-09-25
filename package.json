@@ -36,7 +36,11 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:coverage": "react-scripts test --coverage --watchAll=false",
-    "test:ci": "CI=true react-scripts test --coverage --watchAll=false",
+  "test:ci": "CI=true react-scripts test --coverage --watchAll=false",
+  "smoke": "node scripts/smoke.js",
+  "smoke:codespaces": "BACKEND_URL=https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev FRONTEND_URL=https://potential-guide-wv5pxxvwg45cgr75-3001.app.github.dev node scripts/smoke.js",
+  "start:infra": "docker compose up -d mongodb redis backend; pkill -f \"node scripts/serve-static.js\" || true; nohup node scripts/serve-static.js >/tmp/frontend-static.log 2>&1 & sleep 1; tail -n 3 /tmp/frontend-static.log",
+  "start:codespaces": "npm run -s start:infra && echo 'Backend: https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev/health' && echo 'Frontend: https://potential-guide-wv5pxxvwg45cgr75-3001.app.github.dev/' && npm run -s smoke:codespaces",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
     "eject": "react-scripts eject"
