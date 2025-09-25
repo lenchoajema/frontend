@@ -344,6 +344,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root page (for Codespaces base URL)
+app.get('/', (_req, res) => {
+  res.status(200).send(
+    '<!doctype html>\n' +
+    '<html><head><meta charset="utf-8"><title>Backend</title></head><body>' +
+    '<h1>Backend is running</h1>' +
+    '<ul>' +
+      '<li><a href="/health">/health</a></li>' +
+      '<li><a href="/api/health">/api/health</a></li>' +
+    '</ul>' +
+    '</body></html>'
+  );
+});
+
 app.use("/api/products", productRoutes); //Routes for home page
 // Routes
 app.use('/api/auth', authRoutes); // Authentication routes
