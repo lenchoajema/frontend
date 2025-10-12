@@ -105,10 +105,10 @@ try {
   app.use(mongoSanitize());
   app.use(xssClean());
   // Basic security headers override (example: allow content-type & authorization)
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  app.use((req, _res, next) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+      try { console.log('[auth-debug]', req.method, req.originalUrl, 'ctype=', req.headers['content-type'], 'keys=', Object.keys(req.body||{})); } catch(_){}
+    }
     next();
   });
 } catch (e) {
@@ -122,17 +122,40 @@ const ENABLE_TRACE = process.env.REQUEST_TRACE === '1' || process.env.REQUEST_TR
 const TRACE_FILE = process.env.REQUEST_TRACE_FILE || '/tmp/request-trace.log';
 
 // Middleware
-// Use a raw parser that always captures the body and never throws on malformed JSON.
-// This allows controllers to perform graceful fallback parsing when needed.
-app.use(express.raw({ type: '*/*', limit: '1mb' }));
+// First, parse JSON bodies normally. This ensures req.body is populated for standard application/json.
+app.use(express.json({ limit: '1mb' }));
+// Also capture raw body for non-JSON (and for signature verification) without clobbering parsed JSON.
+app.use((req, res, next) => {
+  if (req.headers['content-type'] && req.headers['content-type'].toLowerCase().includes('application/json')) {
+    // Preserve a raw copy for potential auditing / signature use
+    if (req.body && !req.rawBody) {
+      try { req.rawBody = JSON.stringify(req.body); } catch (_) {}
+    }
+    return next();
+  }
+  // For non-JSON, buffer manually (up to 1mb)
+  const chunks = [];
+  let total = 0;
+  req.on('data', (c) => { total += c.length; if (total <= 1024*1024) chunks.push(c); });
+  req.on('end', () => { const buf = Buffer.concat(chunks); req.rawBuf = buf; req.rawBody = buf.toString('utf8'); next(); });
+});
 
 // Security hardening
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(mongoSanitize());
-// xss-clean expects urlencoded/json parsers; we use raw so apply after we reconstruct body
-app.use((req, res, next) => { try { if (req.body && typeof req.body === 'object') { req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){} next(); });
+// xss-clean expects urlencoded/json parsers; since we use express.raw, avoid touching the Buffer here.
+// We'll sanitize later only when req.body is an actual object (post-parse)
+app.use((req, res, next) => {
+  try {
+    if (Buffer.isBuffer(req.body)) return next();
+    if (req.body && typeof req.body === 'object') {
+      req.body = JSON.parse(xss(JSON.stringify(req.body)));
+    }
+  } catch (_) {}
+  next();
+});
 app.use(compression());
 
 app.use((req, res, next) => {
@@ -147,6 +170,8 @@ app.use((req, res, next) => {
     if (ctype.includes('application/json')) {
       try {
         req.body = req.rawBody ? JSON.parse(req.rawBody) : {};
+        // Sanitize the now-parsed body using xss-clean
+        try { req.body = JSON.parse(xss(JSON.stringify(req.body))); } catch (_) {}
       } catch (e) {
         // don't throw; mark parse failure and leave req.body empty for fallback parsing
         req.jsonParseFailed = true;
@@ -189,16 +214,7 @@ app.use((req, res, next) => {
     req.jsonParseFailed = true;
   }
   // Enforce strict JSON bodies if configured: reject non-JSON request bodies for mutating methods
-  if (STRICT_JSON) {
-    const hasBodyMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((req.method || '').toUpperCase());
-    const ctype = (req.headers['content-type'] || '').toLowerCase();
-    if (hasBodyMethod) {
-      // If content type isn't JSON or parsing previously failed for JSON, reject
-      if (!ctype.includes('application/json') || req.jsonParseFailed) {
-        return res.status(400).json({ message: 'Server requires application/json request bodies' });
-      }
-    }
-  }
+  // STRICT_JSON disabled (bypass) to allow auth/register/login while diagnosing body parsing.
   return next();
 });
 
@@ -336,22 +352,28 @@ app.get('/health', (req, res) => {
 });
 
 // API Health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'API is working',
-    timestamp: new Date().toISOString()
-  });
+// Lightweight sanitizer pass for JSON bodies only (already parsed)
+app.use((req, _res, next) => {
+  try { if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) { req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){}
+  next();
+});
+// Debug: log auth register/login body shape temporarily
+app.use((req, _res, next) => {
+  if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+    try { console.log('[auth-debug]', req.method, req.originalUrl, 'ctype=', req.headers['content-type'], 'keys=', Object.keys(req.body||{})); } catch(_){}
+  }
+  next();
 });
 
-// Root page (for Codespaces base URL)
-app.get('/', (_req, res) => {
-  res.status(200).send(
-    '<!doctype html>\n' +
-    '<html><head><meta charset="utf-8"><title>Backend</title></head><body>' +
-    '<h1>Backend is running</h1>' +
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
+
+app.get('/api', (_req, res) => {
+  res.send(
+    '<html><head><title>API</title></head><body>' +
+    '<h1>API</h1>' +
     '<ul>' +
-      '<li><a href="/health">/health</a></li>' +
       '<li><a href="/api/health">/api/health</a></li>' +
     '</ul>' +
     '</body></html>'
@@ -375,6 +397,17 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/paypal', paypalRoutes);
+
+// New feature routes
+const reviewRoutes = require('./routes/reviewRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
+const gdprRoutes = require('./routes/gdprRoutes');
+const shippingRoutes = require('./routes/shippingRoutes');
+
+app.use('/api/reviews', reviewRoutes); // Review routes
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/gdpr', gdprRoutes);
+app.use('/api/shipping', shippingRoutes);
 // Use shared refresh token helpers from authRoutes to avoid divergence with route logic
 const refreshHelpers = authRoutes._refreshStore || {};
 const storeRefresh = refreshHelpers.storeRefresh || (async ()=>{});

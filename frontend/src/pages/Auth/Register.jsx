@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
+import { storeAuth } from '../../utils/auth';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -13,8 +14,7 @@ export default function Register() {
     try {
       const { data } = await api.post('/auth/register', { name, email, password });
       if (data.accessToken) {
-        localStorage.setItem('token', data.accessToken);
-        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+        storeAuth({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken });
         window.location.href = '/';
       }
     } catch (e) {

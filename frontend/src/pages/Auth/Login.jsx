@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
+import { storeAuth } from '../../utils/auth';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,9 +13,10 @@ export default function Login() {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       if (data.accessToken) {
-        localStorage.setItem('token', data.accessToken);
-        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-        window.location.href = '/';
+        storeAuth({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken });
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get('next') || params.get('redirect') || '/';
+        window.location.href = next.startsWith('/') ? next : '/';
       }
     } catch (e) {
       setError(e.response?.data?.message || e.message);

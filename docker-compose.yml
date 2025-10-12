@@ -65,6 +65,8 @@ services:
       PORT: "3000"
       REACT_APP_BACKEND_URL: "https://potential-guide-wv5pxxvwg45cgr75-5000.app.github.dev"
       CHOKIDAR_USEPOLLING: "true"
+      WDS_SOCKET_PORT: "443"
+      WDS_SOCKET_PROTOCOL: "wss"
     networks:
       - ecommerce_network
 
