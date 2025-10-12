@@ -7,6 +7,17 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   avatar: { type: String, default: 'https://via.placeholder.com/150' },
   role: { type: String, enum: ['admin', 'seller', 'customer'], default: 'customer' },
+  // GDPR Compliance fields
+  cookieConsent: { type: Object, default: {} },
+  marketingConsent: { type: Boolean, default: false },
+  dataProcessingConsent: { type: Boolean, default: true },
+  deletionRequested: { type: Boolean, default: false },
+  deletionRequestedAt: { type: Date },
+  deletionScheduledFor: { type: Date },
+  isActive: { type: Boolean, default: true },
+  // 2FA fields
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
@@ -16,6 +27,11 @@ userSchema.pre('save', async function (next) {
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!enteredPassword) throw new Error('Entered password is undefined');
+  return bcrypt.compare(enteredPassword, this.password);
+};
+
+userSchema.methods.comparePassword = async function (enteredPassword) {
   if (!enteredPassword) throw new Error('Entered password is undefined');
   return bcrypt.compare(enteredPassword, this.password);
 };

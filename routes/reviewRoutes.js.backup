@@ -1,0 +1,312 @@
+const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const Product = require('../models/Product');
+const Order = require('../models/Order');
+
+// Review Schema (embedded in Product model or separate)
+// For this implementation, reviews will be embedded in Product model
+// Add to Product.js model:
+// reviews: [{
+//   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+//   name: { type: String, required: true },
+//   rating: { type: Number, required: true, min: 1, max: 5 },
+//   comment: { type: String, required: true },
+//   helpful: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+//   createdAt: { type: Date, default: Date.now }
+// }]
+
+// @route   POST /api/products/:id/reviews
+// @desc    Add a review to a product
+// @access  Private
+router.post('/:id/reviews', auth, async (req, res) => {
+    // Manual validation
+    if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+    if (!req.body.rating || req.body.rating < 1 || req.body.rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+    if (!req.body.comment || req.body.comment.trim().length < 10 || req.body.comment.trim().length > 1000) {
+      return res.status(400).json({ message: 'Comment must be between 10 and 1000 characters' });
+    }
+
+    try {
+      const product = await Product.findById(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      // Check if user has purchased this product
+      const hasPurchased = await Order.findOne({
+        user: req.user.id,
+        'items.product': req.params.id,
+        status: 'delivered',
+      });
+
+      if (!hasPurchased) {
+        return res.status(403).json({ message: 'You can only review products you have purchased' });
+      }
+
+      // Check if user has already reviewed this product
+      const alreadyReviewed = product.reviews?.find(
+        (review) => review.user.toString() === req.user.id
+      );
+
+      if (alreadyReviewed) {
+        return res.status(400).json({ message: 'You have already reviewed this product' });
+      }
+
+      const review = {
+        user: req.user.id,
+        name: req.user.name,
+        rating: Number(req.body.rating),
+        comment: req.body.comment,
+        createdAt: new Date(),
+      };
+
+      if (!product.reviews) {
+        product.reviews = [];
+      }
+      product.reviews.push(review);
+
+      // Update product rating
+      const totalRating = product.reviews.reduce((acc, item) => item.rating + acc, 0);
+      product.rating = totalRating / product.reviews.length;
+      product.numReviews = product.reviews.length;
+
+      await product.save();
+
+      res.status(201).json({
+        message: 'Review added successfully',
+        review: product.reviews[product.reviews.length - 1],
+      });
+    } catch (error) {
+      console.error('Add review error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// @route   GET /api/products/:id/reviews
+// @desc    Get all reviews for a product
+// @access  Public
+router.get(
+  '/:id/reviews',
+  [
+    param('id').isMongoId().withMessage('Invalid product ID'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('sort').optional().isIn(['recent', 'helpful', 'rating-high', 'rating-low']).withMessage('Invalid sort option'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const product = await Product.findById(req.params.id).populate('reviews.user', 'name');
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      let reviews = product.reviews || [];
+
+      // Sort reviews
+      const sortOption = req.query.sort || 'recent';
+      switch (sortOption) {
+        case 'helpful':
+          reviews.sort((a, b) => (b.helpful?.length || 0) - (a.helpful?.length || 0));
+          break;
+        case 'rating-high':
+          reviews.sort((a, b) => b.rating - a.rating);
+          break;
+        case 'rating-low':
+          reviews.sort((a, b) => a.rating - b.rating);
+          break;
+        case 'recent':
+        default:
+          reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+
+      // Pagination
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+
+      const paginatedReviews = reviews.slice(startIndex, endIndex);
+
+      res.json({
+        reviews: paginatedReviews,
+        currentPage: page,
+        totalPages: Math.ceil(reviews.length / limit),
+        totalReviews: reviews.length,
+      });
+    } catch (error) {
+      console.error('Get reviews error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// @route   PUT /api/products/:productId/reviews/:reviewId
+// @desc    Update a review
+// @access  Private
+router.put(
+  '/:productId/reviews/:reviewId',
+  auth,
+  [
+    param('productId').isMongoId().withMessage('Invalid product ID'),
+    param('reviewId').isMongoId().withMessage('Invalid review ID'),
+    body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+    body('comment').optional().trim().isLength({ min: 10, max: 1000 }).withMessage('Comment must be between 10 and 1000 characters'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      const review = product.reviews?.id(req.params.reviewId);
+      if (!review) {
+        return res.status(404).json({ message: 'Review not found' });
+      }
+
+      // Check if user owns this review
+      if (review.user.toString() !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to update this review' });
+      }
+
+      // Update review fields
+      if (req.body.rating) review.rating = Number(req.body.rating);
+      if (req.body.comment) review.comment = req.body.comment;
+
+      // Recalculate product rating
+      const totalRating = product.reviews.reduce((acc, item) => item.rating + acc, 0);
+      product.rating = totalRating / product.reviews.length;
+
+      await product.save();
+
+      res.json({ message: 'Review updated successfully', review });
+    } catch (error) {
+      console.error('Update review error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// @route   DELETE /api/products/:productId/reviews/:reviewId
+// @desc    Delete a review
+// @access  Private
+router.delete(
+  '/:productId/reviews/:reviewId',
+  auth,
+  [
+    param('productId').isMongoId().withMessage('Invalid product ID'),
+    param('reviewId').isMongoId().withMessage('Invalid review ID'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      const review = product.reviews?.id(req.params.reviewId);
+      if (!review) {
+        return res.status(404).json({ message: 'Review not found' });
+      }
+
+      // Check if user owns this review or is admin
+      if (review.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to delete this review' });
+      }
+
+      review.remove();
+
+      // Recalculate product rating
+      if (product.reviews.length > 0) {
+        const totalRating = product.reviews.reduce((acc, item) => item.rating + acc, 0);
+        product.rating = totalRating / product.reviews.length;
+        product.numReviews = product.reviews.length;
+      } else {
+        product.rating = 0;
+        product.numReviews = 0;
+      }
+
+      await product.save();
+
+      res.json({ message: 'Review deleted successfully' });
+    } catch (error) {
+      console.error('Delete review error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// @route   PUT /api/products/:productId/reviews/:reviewId/helpful
+// @desc    Mark a review as helpful
+// @access  Private
+router.put(
+  '/:productId/reviews/:reviewId/helpful',
+  auth,
+  [
+    param('productId').isMongoId().withMessage('Invalid product ID'),
+    param('reviewId').isMongoId().withMessage('Invalid review ID'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const product = await Product.findById(req.params.productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      const review = product.reviews?.id(req.params.reviewId);
+      if (!review) {
+        return res.status(404).json({ message: 'Review not found' });
+      }
+
+      if (!review.helpful) {
+        review.helpful = [];
+      }
+
+      // Toggle helpful
+      const helpfulIndex = review.helpful.indexOf(req.user.id);
+      if (helpfulIndex > -1) {
+        review.helpful.splice(helpfulIndex, 1);
+      } else {
+        review.helpful.push(req.user.id);
+      }
+
+      await product.save();
+
+      res.json({
+        message: 'Review helpfulness updated',
+        helpfulCount: review.helpful.length,
+      });
+    } catch (error) {
+      console.error('Mark helpful error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+module.exports = router;

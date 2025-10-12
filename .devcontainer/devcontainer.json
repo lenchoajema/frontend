@@ -1,0 +1,52 @@
+{
+  "name": "E-Commerce Platform",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "frontend",
+  "workspaceFolder": "/workspaces/frontend",
+  
+  // Forward ports
+  "forwardPorts": [3000, 5000, 27017, 6379],
+  
+  // Port attributes
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend (React)",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "5000": {
+      "label": "Backend (Node.js API)",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "27017": {
+      "label": "MongoDB",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    }
+  },
+  
+  // Run after container creation
+  "postCreateCommand": "echo '✅ Codespace ready! Services will start via docker-compose.'",
+  
+  // VS Code extensions
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "mongodb.mongodb-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  }
+}

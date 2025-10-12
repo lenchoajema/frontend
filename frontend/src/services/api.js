@@ -13,10 +13,10 @@ function resolveBaseURL() {
     const isCodespaces = origin.includes('.github.dev');
     const isHttpsPage = origin.startsWith('https://');
     if (isCodespaces && isHttpsPage) {
-      // Map Codespaces port suffix
-      if (origin.includes('-3000.')) {
-        return origin.replace('-3000.', '-5000.') + '/api';
-      }
+      // Map Codespaces port suffix to backend 5000
+      if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+      if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+      if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
     }
   } catch (_) {}
 
@@ -29,9 +29,9 @@ function resolveBaseURL() {
       const looksInternalDocker = /ecommerce_backend|localhost:5000/.test(envUrl);
       if (isHttpsPage && looksInternalDocker) {
         // Derive from origin (works for Codespaces or reverse-proxy setups)
-        if (origin.includes('-3000.')) {
-          return origin.replace('-3000.', '-5000.') + '/api';
-        }
+        if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+        if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+        if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
       }
     } catch (_) {}
     return envUrl.replace(/\/$/, '') + '/api';
@@ -40,9 +40,9 @@ function resolveBaseURL() {
   // 2) Infer from current origin
   try {
     const origin = window.location.origin;
-    if (origin.includes('-3000.')) {
-      return origin.replace('-3000.', '-5000.') + '/api';
-    }
+    if (origin.includes('-3000.')) return origin.replace('-3000.', '-5000.') + '/api';
+    if (origin.includes('-3001.')) return origin.replace('-3001.', '-5000.') + '/api';
+    if (origin.includes('-3002.')) return origin.replace('-3002.', '-5000.') + '/api';
     if (origin.includes('localhost:3000')) {
       return 'http://localhost:5000/api';
     }
@@ -73,5 +73,31 @@ api.interceptors.request.use((config) => {
   } catch (_) {}
   return config;
 });
+
+// Normalize certain API responses so UI code can be simpler
+function normalizeProductsPayload(data) {
+  // Accept a few common shapes and always return an array for products
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.products)) return data.products;
+  if (data && Array.isArray(data.items)) return data.items;
+  if (data && data.data && Array.isArray(data.data)) return data.data;
+  return data; // fallback unchanged
+}
+
+api.interceptors.response.use(
+  (response) => {
+    try {
+      const url = (response?.config?.url || '').toString();
+      // Only touch product listing endpoints; leave others intact
+      if (/\/products(\?|$)/.test(url)) {
+        const normalized = normalizeProductsPayload(response.data);
+        // Replace response.data so callers that destructure { data } get the array
+        response.data = normalized;
+      }
+    } catch (_) {}
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default api;

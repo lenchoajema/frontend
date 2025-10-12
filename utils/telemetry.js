@@ -1,6 +1,8 @@
 // Basic OpenTelemetry initialization (console export for now) + minimal manual span helpers
-const { NodeSDK } = require('@opentelemetry/sdk-node');
-const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+let NodeSDK;
+try { ({ NodeSDK } = require('@opentelemetry/sdk-node')); } catch(_) { NodeSDK = null; }
+let getNodeAutoInstrumentations = null; // optional dependency
+try { ({ getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node')); } catch(_) { getNodeAutoInstrumentations = null; }
 let otlpExporter = null;
 let otlpMetricsExporter = null;
 try {
@@ -33,17 +35,22 @@ async function initTelemetry() {
   if (sdkStarted) return sdk;
   try {
     api = require('@opentelemetry/api');
+    if (!NodeSDK) throw new Error('OTel SDK not installed');
     const serviceName = process.env.OTEL_SERVICE_NAME || 'ecommerce-backend';
     let resource;
     try {
       const { Resource } = require('@opentelemetry/resources');
       resource = new Resource({ 'service.name': serviceName });
     } catch(_) { resource = undefined; }
+    const instrumentations = [];
+    if (getNodeAutoInstrumentations) {
+      try { instrumentations.push(getNodeAutoInstrumentations()); } catch(ei) { console.warn('[otel] auto-instrumentations init failed:', ei.message); }
+    }
     sdk = new NodeSDK({
       resource,
       traceExporter: otlpExporter || undefined,
       metricExporter: otlpMetricsExporter || undefined,
-      instrumentations: [getNodeAutoInstrumentations()],
+      instrumentations,
     });
     await sdk.start();
     sdkStarted = true;

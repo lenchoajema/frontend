@@ -113,10 +113,10 @@ try {
   app.use(mongoSanitize());
   app.use(xssClean());
   // Basic security headers override (example: allow content-type & authorization)
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  app.use((req, _res, next) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+      try { console.log('[auth-debug]', req.method, req.originalUrl, 'ctype=', req.headers['content-type'], 'keys=', Object.keys(req.body||{})); } catch(_){}
+    }
     next();
   });
 } catch (e) {
@@ -129,6 +129,7 @@ const STRICT_JSON = process.env.STRICT_JSON === '1' || process.env.STRICT_JSON =
 const ENABLE_TRACE = process.env.REQUEST_TRACE === '1' || process.env.REQUEST_TRACE === 'true' || !!process.env.REQUEST_TRACE;
 const TRACE_FILE = process.env.REQUEST_TRACE_FILE || '/tmp/request-trace.log';
 
+<<<<<<< HEAD
 // ---------------- Simplified Body Parsing ----------------
 // Stripe webhook raw body first (needs to precede express.json)
 const { handleWebhook: stripeWebhook } = require('./controllers/stripeController');
@@ -140,12 +141,108 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use((req,_res,next)=>{ try { if(!req.rawBody && /application\/json/i.test(req.headers['content-type']||'') && req.body && typeof req.body==='object'){ req.rawBody = JSON.stringify(req.body);} } catch(_){} next(); });
 // Debug logging for auth routes
 app.use((req,_res,next)=>{ if(req.originalUrl.startsWith('/api/auth/')) { console.log('[auth-req]', req.method, req.originalUrl, 'ct=', req.headers['content-type'], 'len=', req.headers['content-length']); } next(); });
+=======
+// Middleware
+// First, parse JSON bodies normally. This ensures req.body is populated for standard application/json.
+app.use(express.json({ limit: '1mb' }));
+// Also capture raw body for non-JSON (and for signature verification) without clobbering parsed JSON.
+app.use((req, res, next) => {
+  if (req.headers['content-type'] && req.headers['content-type'].toLowerCase().includes('application/json')) {
+    // Preserve a raw copy for potential auditing / signature use
+    if (req.body && !req.rawBody) {
+      try { req.rawBody = JSON.stringify(req.body); } catch (_) {}
+    }
+    return next();
+  }
+  // For non-JSON, buffer manually (up to 1mb)
+  const chunks = [];
+  let total = 0;
+  req.on('data', (c) => { total += c.length; if (total <= 1024*1024) chunks.push(c); });
+  req.on('end', () => { const buf = Buffer.concat(chunks); req.rawBuf = buf; req.rawBody = buf.toString('utf8'); next(); });
+});
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 
 // Security hardening
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+<<<<<<< HEAD
 app.use((req,_res,next)=>{ try { if(req.body && typeof req.body==='object'){ req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){} if(req.originalUrl.startsWith('/api/auth/')) console.log('[auth-body-keys]', Object.keys(req.body||{})); next(); });
+=======
+app.use(mongoSanitize());
+// xss-clean expects urlencoded/json parsers; since we use express.raw, avoid touching the Buffer here.
+// We'll sanitize later only when req.body is an actual object (post-parse)
+app.use((req, res, next) => {
+  try {
+    if (Buffer.isBuffer(req.body)) return next();
+    if (req.body && typeof req.body === 'object') {
+      req.body = JSON.parse(xss(JSON.stringify(req.body)));
+    }
+  } catch (_) {}
+  next();
+});
+app.use(compression());
+
+app.use((req, res, next) => {
+  try {
+    // raw buffer (may be empty)
+    const buf = req.body && Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+    req.rawBuf = buf;
+    req.rawBody = buf.toString('utf8');
+
+    const ctype = (req.headers['content-type'] || '').toLowerCase();
+    req.jsonParseFailed = false;
+    if (ctype.includes('application/json')) {
+      try {
+        req.body = req.rawBody ? JSON.parse(req.rawBody) : {};
+        // Sanitize the now-parsed body using xss-clean
+        try { req.body = JSON.parse(xss(JSON.stringify(req.body))); } catch (_) {}
+      } catch (e) {
+        // don't throw; mark parse failure and leave req.body empty for fallback parsing
+        req.jsonParseFailed = true;
+        req.body = {};
+      }
+    } else if (ctype.includes('application/x-www-form-urlencoded')) {
+      // simple urlencoded parse
+      const obj = {};
+      const pairs = req.rawBody.split('&').filter(Boolean);
+      for (const p of pairs) {
+        const idx = p.indexOf('=');
+        if (idx > -1) {
+          const k = decodeURIComponent(p.slice(0, idx));
+          const v = decodeURIComponent(p.slice(idx + 1));
+          obj[k] = v;
+        }
+      }
+      req.body = obj;
+    } else if (req.rawBody && req.rawBody.includes(':')) {
+      // attempt to parse simple key:value lines
+      const obj = {};
+      const lines = req.rawBody.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        const idx = line.indexOf(':');
+        if (idx > 0) {
+          const k = line.slice(0, idx).trim();
+          const v = line.slice(idx + 1).trim();
+          obj[k] = v;
+        }
+      }
+      // leave as fallback if controller needs specific keys
+      req.body = obj;
+    } else {
+      req.body = {};
+    }
+  } catch (err) {
+    req.rawBody = undefined;
+    req.rawBuf = undefined;
+    req.body = {};
+    req.jsonParseFailed = true;
+  }
+  // Enforce strict JSON bodies if configured: reject non-JSON request bodies for mutating methods
+  // STRICT_JSON disabled (bypass) to allow auth/register/login while diagnosing body parsing.
+  return next();
+});
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 
 // redact helper (keeps previews safe)
 function redactRawBody(raw) {
@@ -281,12 +378,32 @@ app.get('/health', (req, res) => {
 });
 
 // API Health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'API is working',
-    timestamp: new Date().toISOString()
-  });
+// Lightweight sanitizer pass for JSON bodies only (already parsed)
+app.use((req, _res, next) => {
+  try { if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) { req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){}
+  next();
+});
+// Debug: log auth register/login body shape temporarily
+app.use((req, _res, next) => {
+  if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+    try { console.log('[auth-debug]', req.method, req.originalUrl, 'ctype=', req.headers['content-type'], 'keys=', Object.keys(req.body||{})); } catch(_){}
+  }
+  next();
+});
+
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
+
+app.get('/api', (_req, res) => {
+  res.send(
+    '<html><head><title>API</title></head><body>' +
+    '<h1>API</h1>' +
+    '<ul>' +
+      '<li><a href="/api/health">/api/health</a></li>' +
+    '</ul>' +
+    '</body></html>'
+  );
 });
 
 // Root page (for Codespaces base URL)
@@ -320,6 +437,17 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/paypal', paypalRoutes);
+
+// New feature routes
+const reviewRoutes = require('./routes/reviewRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
+const gdprRoutes = require('./routes/gdprRoutes');
+const shippingRoutes = require('./routes/shippingRoutes');
+
+app.use('/api/reviews', reviewRoutes); // Review routes
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/gdpr', gdprRoutes);
+app.use('/api/shipping', shippingRoutes);
 // Use shared refresh token helpers from authRoutes to avoid divergence with route logic
 const refreshHelpers = authRoutes._refreshStore || {};
 const storeRefresh = refreshHelpers.storeRefresh || (async ()=>{});
