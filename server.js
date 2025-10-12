@@ -90,6 +90,14 @@ const app = express();
 // Request logging (pino-http) – lightweight, skips in test
 let pinoHttp; try { if (process.env.NODE_ENV !== 'test') { pinoHttp = require('pino-http')({ logger }); app.use(pinoHttp); } } catch (_) {}
 
+// Early auth route visibility (before any body parsing/security) TEMPORARY
+app.use((req, _res, next) => {
+  if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+    console.log('[early-auth]', req.method, req.originalUrl, 'ct=', req.headers['content-type'], 'len=', req.headers['content-length']);
+  }
+  next();
+});
+
 // Behind a reverse proxy (Codespaces / GitHub Dev tunnels) so enable trust proxy
 // Resolves express-rate-limit warning about X-Forwarded-For header
 app.set('trust proxy', 1);
@@ -121,6 +129,19 @@ const STRICT_JSON = process.env.STRICT_JSON === '1' || process.env.STRICT_JSON =
 const ENABLE_TRACE = process.env.REQUEST_TRACE === '1' || process.env.REQUEST_TRACE === 'true' || !!process.env.REQUEST_TRACE;
 const TRACE_FILE = process.env.REQUEST_TRACE_FILE || '/tmp/request-trace.log';
 
+<<<<<<< HEAD
+// ---------------- Simplified Body Parsing ----------------
+// Stripe webhook raw body first (needs to precede express.json)
+const { handleWebhook: stripeWebhook } = require('./controllers/stripeController');
+app.post('/api/stripe/webhook', express.raw({ type: '*/*', limit: '1mb' }), (req,res,next)=> stripeWebhook(req,res,next));
+// Standard parsers
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+// Preserve raw JSON copy (post-parse) for auditing
+app.use((req,_res,next)=>{ try { if(!req.rawBody && /application\/json/i.test(req.headers['content-type']||'') && req.body && typeof req.body==='object'){ req.rawBody = JSON.stringify(req.body);} } catch(_){} next(); });
+// Debug logging for auth routes
+app.use((req,_res,next)=>{ if(req.originalUrl.startsWith('/api/auth/')) { console.log('[auth-req]', req.method, req.originalUrl, 'ct=', req.headers['content-type'], 'len=', req.headers['content-length']); } next(); });
+=======
 // Middleware
 // First, parse JSON bodies normally. This ensures req.body is populated for standard application/json.
 app.use(express.json({ limit: '1mb' }));
@@ -139,11 +160,15 @@ app.use((req, res, next) => {
   req.on('data', (c) => { total += c.length; if (total <= 1024*1024) chunks.push(c); });
   req.on('end', () => { const buf = Buffer.concat(chunks); req.rawBuf = buf; req.rawBody = buf.toString('utf8'); next(); });
 });
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 
 // Security hardening
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+<<<<<<< HEAD
+app.use((req,_res,next)=>{ try { if(req.body && typeof req.body==='object'){ req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){} if(req.originalUrl.startsWith('/api/auth/')) console.log('[auth-body-keys]', Object.keys(req.body||{})); next(); });
+=======
 app.use(mongoSanitize());
 // xss-clean expects urlencoded/json parsers; since we use express.raw, avoid touching the Buffer here.
 // We'll sanitize later only when req.body is an actual object (post-parse)
@@ -217,6 +242,7 @@ app.use((req, res, next) => {
   // STRICT_JSON disabled (bypass) to allow auth/register/login while diagnosing body parsing.
   return next();
 });
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 
 // redact helper (keeps previews safe)
 function redactRawBody(raw) {
@@ -374,6 +400,20 @@ app.get('/api', (_req, res) => {
     '<html><head><title>API</title></head><body>' +
     '<h1>API</h1>' +
     '<ul>' +
+      '<li><a href="/api/health">/api/health</a></li>' +
+    '</ul>' +
+    '</body></html>'
+  );
+});
+
+// Root page (for Codespaces base URL)
+app.get('/', (_req, res) => {
+  res.status(200).send(
+    '<!doctype html>\n' +
+    '<html><head><meta charset="utf-8"><title>Backend</title></head><body>' +
+    '<h1>Backend is running</h1>' +
+    '<ul>' +
+      '<li><a href="/health">/health</a></li>' +
       '<li><a href="/api/health">/api/health</a></li>' +
     '</ul>' +
     '</body></html>'

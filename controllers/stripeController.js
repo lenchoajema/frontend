@@ -19,6 +19,13 @@ const createPaymentIntent = async (req, res) => {
   const idemKey = req.headers['idempotency-key'] || req.headers['Idempotency-Key'.toLowerCase()];
 
   if (!stripe) {
+<<<<<<< HEAD
+    console.error('Stripe SDK is not initialized. Check STRIPE_SECRET_KEY.');
+    return res.status(503).json({
+      message: 'Stripe not configured. Set STRIPE_SECRET_KEY to enable payments.',
+      configured: false,
+      id: req.body && req.body.orderId ? req.body.orderId : null
+=======
     // Provide a graceful stub with idempotency behavior for tests/local without Stripe
     if (!idemKey) {
       return res.status(503).json({
@@ -53,12 +60,17 @@ const createPaymentIntent = async (req, res) => {
       orderId: orderId || null,
       paymentIntentId: `stub_${Buffer.from(key).toString('hex').slice(0, 12)}`,
       cached: false
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
     });
   }
 
   if (typeof amount !== 'number' || amount <= 0) {
     console.error('Invalid amount provided:', amount);
+<<<<<<< HEAD
+    return res.status(400).json({ message: 'Invalid amount provided.', id: req.body && req.body.orderId ? req.body.orderId : null });
+=======
     return res.status(400).json({ code: 'PAYMENT_INVALID_AMOUNT', message: 'Invalid amount provided.', id: orderId || null });
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
   }
 
   try {
@@ -74,6 +86,13 @@ const createPaymentIntent = async (req, res) => {
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       configured: true,
+<<<<<<< HEAD
+      id: req.body && req.body.orderId ? req.body.orderId : null
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    return res.status(500).json({ message: 'Failed to create payment intent.', error: error.message, id: req.body && req.body.orderId ? req.body.orderId : null });
+=======
       id: orderId || null,
       orderId: orderId || null,
       paymentIntentId: paymentIntent.id
@@ -81,9 +100,17 @@ const createPaymentIntent = async (req, res) => {
   } catch (error) {
     console.error('Error creating payment intent:', error);
     return res.status(500).json({ message: 'Failed to create payment intent.', error: error.message, id: orderId || null });
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
   }
 };
+// Minimal webhook stub to satisfy router; extend for real Stripe events later
+const handleWebhook = async (req, res) => {
+  try { return res.status(200).send('ok'); } catch (_) { return res.status(200).send('ok'); }
+};
 
+<<<<<<< HEAD
+module.exports = { createPaymentIntent, handleWebhook };
+=======
 // Minimal webhook handler to validate signature when configured
 const handleWebhook = async (req, res) => {
   const sig = (req.headers && (req.headers['stripe-signature'] || req.headers['Stripe-Signature'])) || null;
@@ -102,3 +129,4 @@ const handleWebhook = async (req, res) => {
 const attachRedis = (_redisClient) => { /* no-op */ };
 
 module.exports = { createPaymentIntent, handleWebhook, attachRedis };
+>>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
