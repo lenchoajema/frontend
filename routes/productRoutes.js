@@ -28,11 +28,7 @@ router.get('/', async (req, res) => {
 		res.set('X-Total', '0');
 		res.set('X-Page', String(page));
 		res.set('X-Pages', '0');
-<<<<<<< HEAD
-		return res.json([]);
-=======
 		return res.json({ items: [], total: 0, page, pages: 0 });
->>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 	}
 	const skip = (page - 1) * limit;
 	const [items, total] = await Promise.all([
@@ -42,11 +38,7 @@ router.get('/', async (req, res) => {
 	res.set('X-Total', String(total));
 	res.set('X-Page', String(page));
 	res.set('X-Pages', String(Math.ceil(total / limit)));
-<<<<<<< HEAD
-	return res.json(items);
-=======
 	return res.json({ items, total, page, pages: Math.ceil(total / limit) });
->>>>>>> 269f5cbb0820f180d9f52190c3f3471a8e8605b8
 });
 
 router.get('/:id', async (req, res) => {
