@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 		res.set('X-Total', '0');
 		res.set('X-Page', String(page));
 		res.set('X-Pages', '0');
-		return res.json([]);
+		return res.json({ items: [], total: 0, page, pages: 0 });
 	}
 	const skip = (page - 1) * limit;
 	const [items, total] = await Promise.all([

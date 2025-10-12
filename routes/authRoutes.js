@@ -44,22 +44,26 @@ function signRefresh(user) {
 
 // POST /register
 router.post('/register', async (req, res) => {
+	// Fallback: if body is empty but rawBody exists, attempt to parse
+	if ((!req.body || Object.keys(req.body).length === 0) && req.rawBody) {
+		try { req.body = JSON.parse(req.rawBody); } catch (_) {}
+	}
 	const { name, email, password } = req.body || {};
 	if (!name || !email || !password) return res.status(400).json({ message: 'All fields are required.' });
+
 	const useDb = !!(User && mongoose.connection.readyState === 1);
 	try {
-		// Align with schema enum: ['admin','seller','customer'] ("user" alias -> "customer")
-		let uid, role = 'customer', nameOut = name, emailOut = email;
+		let uid, role = 'user', nameOut = name, emailOut = email;
 		if (useDb) {
 			const existing = await User.findOne({ email: String(email).toLowerCase().trim() });
 			if (existing) return res.status(409).json({ message: 'Email already registered.' });
-			const userDoc = new User({ name, email, password, role: 'customer' });
+			const userDoc = new User({ name, email, password, role: 'user' });
 			await userDoc.save();
-			uid = String(userDoc._id); role = userDoc.role || 'customer'; nameOut = userDoc.name; emailOut = userDoc.email;
+			uid = String(userDoc._id); role = userDoc.role || 'user'; nameOut = userDoc.name; emailOut = userDoc.email;
 			audit.event('user.register', { userId: uid, email: emailOut });
 		} else {
 			if (users.has(email)) return res.status(409).json({ message: 'Email already registered.' });
-			const user = { id: (users.size + 1).toString(), name, email, password, role: 'customer' };
+			const user = { id: (users.size + 1).toString(), name, email, password, role: 'user' };
 			users.set(email, user);
 			uid = user.id; role = user.role; nameOut = user.name; emailOut = user.email;
 			audit.event('user.register', { userId: uid, email: emailOut });
@@ -67,6 +71,8 @@ router.post('/register', async (req, res) => {
 
 		const accessToken = signAccess({ id: uid, role });
 		const refreshToken = signRefresh({ id: uid, role });
+
+		// Merge guest cart if present
 		let headers = {};
 		try {
 			if (Cart && mongoose.connection.readyState === 1) {
@@ -96,17 +102,20 @@ router.post('/register', async (req, res) => {
 
 // POST /login
 router.post('/login', async (req, res) => {
+	if ((!req.body || Object.keys(req.body).length === 0) && req.rawBody) {
+		try { req.body = JSON.parse(req.rawBody); } catch (_) {}
+	}
 	const { email, password } = req.body || {};
 	if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
 	const useDb = !!(User && mongoose.connection.readyState === 1);
-	let uid, role = 'customer', nameOut, emailOut;
+	let uid, role = 'user', nameOut, emailOut;
 	if (useDb) {
 		try {
 			const userDoc = await User.findOne({ email: String(email).toLowerCase().trim() });
 			if (!userDoc) return res.status(401).json({ message: 'Invalid credentials.' });
 			const ok = await userDoc.matchPassword(password);
 			if (!ok) return res.status(401).json({ message: 'Invalid credentials.' });
-			uid = String(userDoc._id); role = userDoc.role || 'customer'; nameOut = userDoc.name; emailOut = userDoc.email;
+			uid = String(userDoc._id); role = userDoc.role || 'user'; nameOut = userDoc.name; emailOut = userDoc.email;
 		} catch (e) {
 			return res.status(500).json({ message: 'Login failed' });
 		}
@@ -115,10 +124,12 @@ router.post('/login', async (req, res) => {
 		if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials.' });
 		uid = user.id; role = user.role; nameOut = user.name; emailOut = user.email;
 	}
+
 	const accessToken = signAccess({ id: uid, role });
 	const refreshToken = signRefresh({ id: uid, role });
 	audit.event('user.login', { userId: uid, email: emailOut });
 	let headers = {};
+	// Merge guest cart if present
 	try {
 		if (Cart && mongoose.connection.readyState === 1) {
 			const cookies = cookie.parse(req.headers.cookie || '');

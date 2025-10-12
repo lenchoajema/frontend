@@ -79,6 +79,35 @@ router.post('/create-order', authenticateUser, requirePaymentsEnabled, async (re
   }
   const idemKey = req.headers['idempotency-key'] || req.headers['Idempotency-Key'.toLowerCase()];
   let orderDoc = null;
+  
+  try {
+    let earlyResponse = null;
+    await withSpan('orders.create', async (span) => {
+      try { span.setAttribute('order.total', total); if (idemKey) span.setAttribute('order.idem_key', idemKey); } catch(_) {}
+      if (hasDb) {
+      const Order = require('../models/Order');
+      if (idemKey) {
+        orderDoc = await Order.findOne({ idemKey, user: req.user.id });
+        if (orderDoc) {
+          // Idempotent replay: short-circuit and return existing linkage after refreshing timeline
+          await orderDoc.addEvent('idempotent_reuse', { idemKey });
+          record('orders.idempotent_reuse');
+          req.body.orderId = orderDoc._id.toString();
+          req.body.amount = Math.round(orderDoc.total * 100);
+          earlyResponse = await createPaymentIntent(req, res); // downstream createPaymentIntent will see existing orderId/idempotency
+          return; // stop span work
+        }
+      }
+  orderDoc = await Order.create({ user: req.user.id, items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, pictures: i.pictures||[] })), total, status: 'Pending', idemKey, timeline: [{ type: 'created', meta: { total } }] });
+  record('orders.created');
+      req.body.orderId = orderDoc._id.toString();
+      }
+    });
+    if (earlyResponse) return earlyResponse;
+    if (!req.body.orderId) {
+      req.body.orderId = 'ephemeral-' + Date.now();
+    }
+  req.body.amount = Math.round(total * 100); // dollars -> cents
   const resp = await createPaymentIntent(req, res);
     // If payment controller returns an error (e.g., 503 stub) and we have an order doc, append failure event
     if (orderDoc && resp && resp.statusCode && resp.statusCode >= 400) {
