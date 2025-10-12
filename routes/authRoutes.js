@@ -4,11 +4,12 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const cookie = require('cookie');
 let Cart; try { Cart = require('../models/Cart'); } catch (_) { Cart = null; }
+let User; try { User = require('../models/User'); } catch (_) { User = null; }
 
 /* eslint-env node */
 const jwt = require('jsonwebtoken');
 const audit = require('../utils/auditLogger');
-// In-memory user store (email -> user) for test/demo (replace with Mongo queries)
+// In-memory user store (email -> user) for test/demo (fallback when DB is not connected)
 const users = new Map();
 // Local fallback set (shared with server.js via exported helpers to avoid divergence)
 const refreshTokens = new Set();
@@ -45,51 +46,86 @@ function signRefresh(user) {
 router.post('/register', async (req, res) => {
 	const { name, email, password } = req.body || {};
 	if (!name || !email || !password) return res.status(400).json({ message: 'All fields are required.' });
-	if (users.has(email)) return res.status(409).json({ message: 'Email already registered.' });
-	const user = { id: (users.size+1).toString(), name, email, password, role: 'user' };
-		users.set(email, user);
-		audit.event('user.register', { userId: user.id, email });
-	const accessToken = signAccess(user);
-	const refreshToken = signRefresh(user);
-	let headers = {};
+	const useDb = !!(User && mongoose.connection.readyState === 1);
 	try {
-		if (Cart && mongoose.connection.readyState === 1) {
-			const cookies = cookie.parse(req.headers.cookie || '');
-			const g = cookies.gcart ? JSON.parse(decodeURIComponent(cookies.gcart)) : null;
-			if (g && Array.isArray(g.items) && g.items.length) {
-				let cart = await Cart.findOne({ user: user.id });
-				if (!cart) cart = new Cart({ user: user.id, items: [], total: 0 });
-				for (const it of g.items) {
-					const idx = cart.items.findIndex(i => i.productId === String(it.productId));
-					if (idx >= 0) cart.items[idx].quantity += Number(it.quantity || 1);
-					else cart.items.push({ productId: String(it.productId), name: it.name, price: Number(it.price||0), pictures: it.pictures||[], quantity: Number(it.quantity||1) });
-				}
-				cart.total = (cart.items || []).reduce((s, i) => s + Number(i.price||0)*Number(i.quantity||0), 0);
-				await cart.save();
-				headers['Set-Cookie'] = 'gcart=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
-			}
+		// Align with schema enum: ['admin','seller','customer'] ("user" alias -> "customer")
+		let uid, role = 'customer', nameOut = name, emailOut = email;
+		if (useDb) {
+			const existing = await User.findOne({ email: String(email).toLowerCase().trim() });
+			if (existing) return res.status(409).json({ message: 'Email already registered.' });
+			const userDoc = new User({ name, email, password, role: 'customer' });
+			await userDoc.save();
+			uid = String(userDoc._id); role = userDoc.role || 'customer'; nameOut = userDoc.name; emailOut = userDoc.email;
+			audit.event('user.register', { userId: uid, email: emailOut });
+		} else {
+			if (users.has(email)) return res.status(409).json({ message: 'Email already registered.' });
+			const user = { id: (users.size + 1).toString(), name, email, password, role: 'customer' };
+			users.set(email, user);
+			uid = user.id; role = user.role; nameOut = user.name; emailOut = user.email;
+			audit.event('user.register', { userId: uid, email: emailOut });
 		}
-	} catch (_) {}
-	return res.status(201).set(headers).json({ user: { id: user.id, name, email, role: user.role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
+
+		const accessToken = signAccess({ id: uid, role });
+		const refreshToken = signRefresh({ id: uid, role });
+		let headers = {};
+		try {
+			if (Cart && mongoose.connection.readyState === 1) {
+				const cookies = cookie.parse(req.headers.cookie || '');
+				const g = cookies.gcart ? JSON.parse(decodeURIComponent(cookies.gcart)) : null;
+				if (g && Array.isArray(g.items) && g.items.length) {
+					let cart = await Cart.findOne({ user: uid });
+					if (!cart) cart = new Cart({ user: uid, items: [], total: 0 });
+					for (const it of g.items) {
+						const idx = cart.items.findIndex(i => i.productId === String(it.productId));
+						if (idx >= 0) cart.items[idx].quantity += Number(it.quantity || 1);
+						else cart.items.push({ productId: String(it.productId), name: it.name, price: Number(it.price||0), pictures: it.pictures||[], quantity: Number(it.quantity||1) });
+					}
+					cart.total = (cart.items || []).reduce((s, i) => s + Number(i.price||0)*Number(i.quantity||0), 0);
+					await cart.save();
+					headers['Set-Cookie'] = 'gcart=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
+				}
+			}
+		} catch (_) {}
+
+		return res.status(201).set(headers).json({ user: { id: uid, name: nameOut, email: emailOut, role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
+	} catch (e) {
+		if (e && e.code === 11000) return res.status(409).json({ message: 'Email already registered.' });
+		return res.status(500).json({ message: 'Registration failed' });
+	}
 });
 
 // POST /login
 router.post('/login', async (req, res) => {
 	const { email, password } = req.body || {};
 	if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
-	const user = users.get(email);
-	if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials.' });
-	const accessToken = signAccess(user);
-	const refreshToken = signRefresh(user);
-		audit.event('user.login', { userId: user.id, email });
+	const useDb = !!(User && mongoose.connection.readyState === 1);
+	let uid, role = 'customer', nameOut, emailOut;
+	if (useDb) {
+		try {
+			const userDoc = await User.findOne({ email: String(email).toLowerCase().trim() });
+			if (!userDoc) return res.status(401).json({ message: 'Invalid credentials.' });
+			const ok = await userDoc.matchPassword(password);
+			if (!ok) return res.status(401).json({ message: 'Invalid credentials.' });
+			uid = String(userDoc._id); role = userDoc.role || 'customer'; nameOut = userDoc.name; emailOut = userDoc.email;
+		} catch (e) {
+			return res.status(500).json({ message: 'Login failed' });
+		}
+	} else {
+		const user = users.get(email);
+		if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials.' });
+		uid = user.id; role = user.role; nameOut = user.name; emailOut = user.email;
+	}
+	const accessToken = signAccess({ id: uid, role });
+	const refreshToken = signRefresh({ id: uid, role });
+	audit.event('user.login', { userId: uid, email: emailOut });
 	let headers = {};
 	try {
 		if (Cart && mongoose.connection.readyState === 1) {
 			const cookies = cookie.parse(req.headers.cookie || '');
 			const g = cookies.gcart ? JSON.parse(decodeURIComponent(cookies.gcart)) : null;
 			if (g && Array.isArray(g.items) && g.items.length) {
-				let cart = await Cart.findOne({ user: user.id });
-				if (!cart) cart = new Cart({ user: user.id, items: [], total: 0 });
+				let cart = await Cart.findOne({ user: uid });
+				if (!cart) cart = new Cart({ user: uid, items: [], total: 0 });
 				for (const it of g.items) {
 					const idx = cart.items.findIndex(i => i.productId === String(it.productId));
 					if (idx >= 0) cart.items[idx].quantity += Number(it.quantity || 1);
@@ -101,7 +137,7 @@ router.post('/login', async (req, res) => {
 			}
 		}
 	} catch (_) {}
-	return res.set(headers).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
+	return res.set(headers).json({ user: { id: uid, name: nameOut, email: emailOut, role }, accessToken, refreshToken, mergedGuestCart: !!headers['Set-Cookie'] });
 });
 
 // GET /me
@@ -129,6 +165,9 @@ router.post('/logout', async (req, res) => {
 	}
 	return res.json({ message: 'Logged out' });
 });
+
+// Diagnostic ping endpoint to verify auth router is mounted
+router.get('/_ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // Export for tests (not part of API contract)
 // Export for server integration & tests

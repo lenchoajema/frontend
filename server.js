@@ -90,6 +90,14 @@ const app = express();
 // Request logging (pino-http) – lightweight, skips in test
 let pinoHttp; try { if (process.env.NODE_ENV !== 'test') { pinoHttp = require('pino-http')({ logger }); app.use(pinoHttp); } } catch (_) {}
 
+// Early auth route visibility (before any body parsing/security) TEMPORARY
+app.use((req, _res, next) => {
+  if (req.originalUrl && req.originalUrl.startsWith('/api/auth/')) {
+    console.log('[early-auth]', req.method, req.originalUrl, 'ct=', req.headers['content-type'], 'len=', req.headers['content-length']);
+  }
+  next();
+});
+
 // Behind a reverse proxy (Codespaces / GitHub Dev tunnels) so enable trust proxy
 // Resolves express-rate-limit warning about X-Forwarded-For header
 app.set('trust proxy', 1);
@@ -121,86 +129,23 @@ const STRICT_JSON = process.env.STRICT_JSON === '1' || process.env.STRICT_JSON =
 const ENABLE_TRACE = process.env.REQUEST_TRACE === '1' || process.env.REQUEST_TRACE === 'true' || !!process.env.REQUEST_TRACE;
 const TRACE_FILE = process.env.REQUEST_TRACE_FILE || '/tmp/request-trace.log';
 
-// Middleware
-// Use a raw parser that always captures the body and never throws on malformed JSON.
-// This allows controllers to perform graceful fallback parsing when needed.
-app.use(express.raw({ type: '*/*', limit: '1mb' }));
+// ---------------- Simplified Body Parsing ----------------
+// Stripe webhook raw body first (needs to precede express.json)
+const { handleWebhook: stripeWebhook } = require('./controllers/stripeController');
+app.post('/api/stripe/webhook', express.raw({ type: '*/*', limit: '1mb' }), (req,res,next)=> stripeWebhook(req,res,next));
+// Standard parsers
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+// Preserve raw JSON copy (post-parse) for auditing
+app.use((req,_res,next)=>{ try { if(!req.rawBody && /application\/json/i.test(req.headers['content-type']||'') && req.body && typeof req.body==='object'){ req.rawBody = JSON.stringify(req.body);} } catch(_){} next(); });
+// Debug logging for auth routes
+app.use((req,_res,next)=>{ if(req.originalUrl.startsWith('/api/auth/')) { console.log('[auth-req]', req.method, req.originalUrl, 'ct=', req.headers['content-type'], 'len=', req.headers['content-length']); } next(); });
 
 // Security hardening
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-app.use(mongoSanitize());
-// xss-clean expects urlencoded/json parsers; we use raw so apply after we reconstruct body
-app.use((req, res, next) => { try { if (req.body && typeof req.body === 'object') { req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){} next(); });
-app.use(compression());
-
-app.use((req, res, next) => {
-  try {
-    // raw buffer (may be empty)
-    const buf = req.body && Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
-    req.rawBuf = buf;
-    req.rawBody = buf.toString('utf8');
-
-    const ctype = (req.headers['content-type'] || '').toLowerCase();
-    req.jsonParseFailed = false;
-    if (ctype.includes('application/json')) {
-      try {
-        req.body = req.rawBody ? JSON.parse(req.rawBody) : {};
-      } catch (e) {
-        // don't throw; mark parse failure and leave req.body empty for fallback parsing
-        req.jsonParseFailed = true;
-        req.body = {};
-      }
-    } else if (ctype.includes('application/x-www-form-urlencoded')) {
-      // simple urlencoded parse
-      const obj = {};
-      const pairs = req.rawBody.split('&').filter(Boolean);
-      for (const p of pairs) {
-        const idx = p.indexOf('=');
-        if (idx > -1) {
-          const k = decodeURIComponent(p.slice(0, idx));
-          const v = decodeURIComponent(p.slice(idx + 1));
-          obj[k] = v;
-        }
-      }
-      req.body = obj;
-    } else if (req.rawBody && req.rawBody.includes(':')) {
-      // attempt to parse simple key:value lines
-      const obj = {};
-      const lines = req.rawBody.split(/\r?\n/).filter(Boolean);
-      for (const line of lines) {
-        const idx = line.indexOf(':');
-        if (idx > 0) {
-          const k = line.slice(0, idx).trim();
-          const v = line.slice(idx + 1).trim();
-          obj[k] = v;
-        }
-      }
-      // leave as fallback if controller needs specific keys
-      req.body = obj;
-    } else {
-      req.body = {};
-    }
-  } catch (err) {
-    req.rawBody = undefined;
-    req.rawBuf = undefined;
-    req.body = {};
-    req.jsonParseFailed = true;
-  }
-  // Enforce strict JSON bodies if configured: reject non-JSON request bodies for mutating methods
-  if (STRICT_JSON) {
-    const hasBodyMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes((req.method || '').toUpperCase());
-    const ctype = (req.headers['content-type'] || '').toLowerCase();
-    if (hasBodyMethod) {
-      // If content type isn't JSON or parsing previously failed for JSON, reject
-      if (!ctype.includes('application/json') || req.jsonParseFailed) {
-        return res.status(400).json({ message: 'Server requires application/json request bodies' });
-      }
-    }
-  }
-  return next();
-});
+app.use((req,_res,next)=>{ try { if(req.body && typeof req.body==='object'){ req.body = JSON.parse(xss(JSON.stringify(req.body))); } } catch(_){} if(req.originalUrl.startsWith('/api/auth/')) console.log('[auth-body-keys]', Object.keys(req.body||{})); next(); });
 
 // redact helper (keeps previews safe)
 function redactRawBody(raw) {
