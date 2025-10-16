@@ -83,10 +83,6 @@ const createPaymentIntent = async (req, res) => {
     return res.status(500).json({ message: 'Failed to create payment intent.', error: error.message, id: orderId || null });
   }
 };
-// Minimal webhook stub to satisfy router; extend for real Stripe events later
-const handleWebhook = async (req, res) => {
-  try { return res.status(200).send('ok'); } catch (_) { return res.status(200).send('ok'); }
-};
 
 // Minimal webhook handler to validate signature when configured
 const handleWebhook = async (req, res) => {
